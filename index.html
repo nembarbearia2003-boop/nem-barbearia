@@ -1098,6 +1098,13 @@
     let isAdminAuthenticated = sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true';
     let isSoundAlertEnabled = true;
 
+    // Endpoint de nuvem pública (KVstore para Nem Barbearia Since 2003)
+    const CLOUD_SYNC_URL = 'https://api.restful-api.dev/objects';
+    const CLOUD_STORAGE_KEY = 'nem_barbearia_cloud_id_v3';
+    let cloudRecordId = localStorage.getItem(CLOUD_STORAGE_KEY) || null;
+    let livePollingTimer = null;
+    let lastKnownAppointmentCount = 0;
+
     // Canal de transmissão em tempo real entre abas / dispositivos
     let bookingBroadcast = null;
     try {
@@ -1510,7 +1517,88 @@
       showToast(`🔔 Novo agendamento: ${appointment.clientName} (${appointment.time})`, 'success');
     }
 
-    function finalizeBooking() {
+    /* =========================================================================
+       SINCRONIZAÇÃO EM NUVEM (MULTI-DISPOSITIVOS: CELULAR -> COMPUTADOR)
+       ========================================================================= */
+    async function syncToCloud(appointmentsList) {
+      try {
+        // Envia o payload atualizado para a nuvem
+        const payload = {
+          name: "NemBarbearia_Data_v3",
+          data: {
+            updatedAt: new Date().toISOString(),
+            appointments: appointmentsList
+          }
+        };
+
+        if (cloudRecordId) {
+          // Atualiza registro existente
+          await fetch(`${CLOUD_SYNC_URL}/${cloudRecordId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }).catch(() => null);
+        } else {
+          // Cria o canal na nuvem na primeira vez
+          const res = await fetch(CLOUD_SYNC_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const json = await res.json();
+          if (json && json.id) {
+            cloudRecordId = json.id;
+            localStorage.setItem(CLOUD_STORAGE_KEY, cloudRecordId);
+          }
+        }
+      } catch (err) {
+        console.warn('Sincronização em nuvem operando em modo offline:', err);
+      }
+    }
+
+    async function fetchCloudUpdates() {
+      if (!cloudRecordId) return;
+      try {
+        const res = await fetch(`${CLOUD_SYNC_URL}/${cloudRecordId}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const cloudObj = await res.json();
+        if (cloudObj && cloudObj.data && Array.isArray(cloudObj.data.appointments)) {
+          const cloudApts = cloudObj.data.appointments;
+          
+          // Verifica se chegou agendamento novo
+          if (cloudApts.length > allAppointments.length) {
+            const newest = cloudApts[0];
+            allAppointments = cloudApts;
+            saveAppointmentsToStorage();
+            updateAdminDashboard();
+            playBookingChime();
+            showNotificationDot();
+            if (newest) {
+              showToast(`🔔 Novo agendamento de ${newest.clientName} recebido!`, 'success');
+            }
+          } else {
+            // Se o conteúdo mudou (ex: status cancelado ou concluído)
+            if (JSON.stringify(cloudApts) !== JSON.stringify(allAppointments)) {
+              allAppointments = cloudApts;
+              saveAppointmentsToStorage();
+              updateAdminDashboard();
+            }
+          }
+        }
+      } catch (e) {
+        // Silencioso para não incomodar em caso de oscilação momentânea de internet
+      }
+    }
+
+    function startLivePolling() {
+      if (livePollingTimer) clearInterval(livePollingTimer);
+      // Consulta a nuvem a cada 4 segundos de forma transparente
+      livePollingTimer = setInterval(() => {
+        fetchCloudUpdates();
+      }, 4000);
+    }
+
+    async function finalizeBooking() {
       if (!currentBooking.service || !currentBooking.date || !currentBooking.time || !currentBooking.clientName || !currentBooking.clientPhone) {
         showToast('Por favor, preencha todos os campos obrigatórios!', 'error');
         return;
@@ -1538,12 +1626,15 @@
       allAppointments.unshift(appointment);
       saveAppointmentsToStorage();
 
-      // Sincroniza em tempo real o painel administrativo imediatamente
+      // 1. Sincroniza em nuvem imediatamente para refletir no computador/balcão
+      syncToCloud(allAppointments);
+
+      // 2. Sincroniza em tempo real o painel administrativo imediatamente
       updateAdminDashboard();
       showNotificationDot();
       playBookingChime();
 
-      // Transmite para outras abas abertas da barbearia (ex: tela do balcão ou computador do barbeiro)
+      // 3. Transmite para outras abas abertas da barbearia
       if (bookingBroadcast) {
         try {
           bookingBroadcast.postMessage({ type: 'NEW_BOOKING', appointment });
@@ -2587,6 +2678,11 @@
       renderServices();
       renderBarbers();
       initDatePicker();
+
+      // Inicia verificação automática em tempo real pela nuvem
+      startLivePolling();
+      // Executa uma sincronização inicial de fundo
+      fetchCloudUpdates();
 
       // Se o barbeiro já estava com a sessão aberta nesta aba, restaura o painel administrativo
       if (sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true') {
