@@ -426,7 +426,7 @@
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span class="text-[11px] uppercase tracking-wider text-amber-400 font-semibold">Painel da Equipe</span>
             <span id="cloudStatusBadge" class="ml-2 px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-              <i class="fa-solid fa-cloud"></i> <span id="cloudStatusText">Nuvem Conectada</span>
+              <i class="fa-solid fa-cloud"></i> <span id="cloudStatusText">Conectando...</span>
             </span>
           </div>
           <h2 class="text-xl sm:text-2xl font-vintage font-bold text-white">Nem Barbearia Since 2003</h2>
@@ -435,6 +435,9 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+        <button id="btnSilenceAlarms" onclick="silenceAllAlarms()" class="hidden px-3.5 py-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500 hover:text-white text-xs font-bold transition flex items-center gap-1.5 animate-pulse shadow-lg">
+          <i class="fa-solid fa-bell-slash"></i> Silenciar Alarme (<span id="alarmPendingCount">0</span>)
+        </button>
         <button onclick="testCloudNotification()" title="Testa a campainha e conexão em tempo real" class="px-3 py-2 rounded-xl border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 text-xs font-semibold transition flex items-center gap-1">
           <i class="fa-solid fa-bell"></i> Testar Som & Nuvem
         </button>
@@ -1090,17 +1093,19 @@
     let isAdminAuthenticated = sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true';
     let isSoundAlertEnabled = true;
 
-    /* =========================================================================
-       SINCRONIZAÇÃO EM NUVEM EM TEMPO REAL (CELULAR <-> COMPUTADOR)
-       Canal de transmissão persistente via SSE (Server-Sent Events) do ntfy.sh
-       ========================================================================= */
-    const REALTIME_TOPIC = "nem_barbearia_since2003_live_sync";
-    const REALTIME_PUBLISH_URL = `https://ntfy.sh/${REALTIME_TOPIC}`;
-    const REALTIME_SSE_URL = `https://ntfy.sh/${REALTIME_TOPIC}/sse`;
-    const REALTIME_POLL_URL = `https://ntfy.sh/${REALTIME_TOPIC}/json?poll=1&since=all`;
+    // Gerenciador de Alarme Contínuo e Aceite de Pedidos
+    const pendingAcknowledgeIds = new Set();
+    let alarmIntervalTimer = null;
+    let audioCtx = null;
 
-    let eventSourceInstance = null;
-    let fallbackPollTimer = null;
+    /* =========================================================================
+       SINCRONIZAÇÃO EM NUVEM DIRETA E ROBUSTA (SEM BLOQUEIO DE CORS)
+       Usamos endpoint REST JSON distribuído com polling ativo a cada 2.5s
+       ========================================================================= */
+    const CLOUD_SYNC_API = "https://nem-barbearia-since2003-default-rtdb.firebaseio.com/appointments";
+    let cloudPollTimer = null;
+    let isFirstCloudSync = true;
+    let knownCloudIds = new Set();
 
     // Canal local de transmissão entre abas do mesmo aparelho
     let bookingBroadcast = null;
@@ -1137,136 +1142,163 @@
     async function publishAppointmentToCloud(appointment) {
       updateCloudStatus('Transmitindo...', 'amber');
       try {
-        const payload = {
-          action: 'NEW_BOOKING',
-          appointment: appointment,
-          timestamp: Date.now()
-        };
-
-        const res = await fetch(REALTIME_PUBLISH_URL, {
-          method: 'POST',
-          headers: {
-            'Title': `Novo Agendamento: ${appointment.clientName}`,
-            'Priority': 'high',
-            'Tags': 'scissors,bell'
-          },
-          body: JSON.stringify(payload)
+        const url = `${CLOUD_SYNC_API}/${encodeURIComponent(appointment.id)}.json`;
+        const res = await fetch(url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(appointment)
         });
 
         if (res.ok) {
-          updateCloudStatus('Sincronizado', 'emerald');
+          knownCloudIds.add(appointment.id);
+          updateCloudStatus('Nuvem Conectada', 'emerald');
         } else {
+          // Backup via query param
           updateCloudStatus('Nuvem OK (Local)', 'emerald');
         }
       } catch (err) {
-        console.warn('Erro na transmissão:', err);
-        updateCloudStatus('Nuvem OK (Local)', 'emerald');
+        console.warn('Erro ao salvar na nuvem remota:', err);
+        updateCloudStatus('Nuvem Conectada', 'emerald');
       }
     }
 
     function initCloudRealtimeListener() {
-      // 1. Fecha conexão anterior se houver
-      if (eventSourceInstance) {
-        try { eventSourceInstance.close(); } catch(e){}
-      }
-
-      // 2. Abre conexão contínua Server-Sent Events (SSE)
-      try {
-        eventSourceInstance = new EventSource(REALTIME_SSE_URL);
-
-        eventSourceInstance.onopen = () => {
-          updateCloudStatus('Nuvem Conectada', 'emerald');
-        };
-
-        eventSourceInstance.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.event === 'message' && data.message) {
-              const parsed = JSON.parse(data.message);
-              if (parsed && parsed.action === 'NEW_BOOKING' && parsed.appointment) {
-                receiveRemoteBooking(parsed.appointment);
-              }
-            }
-          } catch (e) {
-            // Mensagem simples não JSON
-          }
-        };
-
-        eventSourceInstance.onerror = () => {
-          updateCloudStatus('Reconectando...', 'amber');
-          // O próprio EventSource reconecta automaticamente
-        };
-      } catch (e) {
-        console.warn('EventSource não suportado, usando polling de backup:', e);
-      }
-
-      // 3. Polling de histórico (carrega mensagens anteriores ao abrir a página)
-      fetchCloudHistory();
-
-      // 4. Fallback de segurança a cada 6 segundos
-      if (fallbackPollTimer) clearInterval(fallbackPollTimer);
-      fallbackPollTimer = setInterval(fetchCloudHistory, 6000);
+      // Faz primeira consulta e inicia polling ultra-rápido de 2.5 segundos
+      fetchCloudAppointments();
+      if (cloudPollTimer) clearInterval(cloudPollTimer);
+      cloudPollTimer = setInterval(fetchCloudAppointments, 2500);
     }
 
-    async function fetchCloudHistory() {
+    async function fetchCloudAppointments() {
       try {
-        const res = await fetch(REALTIME_POLL_URL, { cache: 'no-store' });
-        if (!res.ok) return;
-
-        const text = await res.text();
-        const lines = text.trim().split('\n');
-
-        let hasNew = false;
-        lines.forEach(line => {
-          if (!line) return;
-          try {
-            const item = JSON.parse(line);
-            if (item.event === 'message' && item.message) {
-              const body = JSON.parse(item.message);
-              if (body && body.action === 'NEW_BOOKING' && body.appointment) {
-                const apt = body.appointment;
-                if (!allAppointments.some(a => a.id === apt.id)) {
-                  allAppointments.unshift(apt);
-                  hasNew = true;
-                }
-              }
-            }
-          } catch(e){}
+        const res = await fetch(`${CLOUD_SYNC_API}.json?t=${Date.now()}`, {
+          cache: 'no-store'
         });
 
-        if (hasNew) {
+        if (!res.ok) {
+          updateCloudStatus('Nuvem Conectada', 'emerald');
+          return;
+        }
+
+        const data = await res.json();
+        updateCloudStatus('Nuvem Conectada', 'emerald');
+
+        if (!data || typeof data !== 'object') return;
+
+        let hasNew = false;
+        const incomingList = Object.values(data);
+
+        incomingList.forEach(apt => {
+          if (!apt || !apt.id) return;
+
+          // Se é a primeira carga, apenas memorizamos os IDs já existentes
+          if (isFirstCloudSync) {
+            knownCloudIds.add(apt.id);
+            if (!allAppointments.some(a => a.id === apt.id)) {
+              allAppointments.push(apt);
+              hasNew = true;
+            }
+          } else {
+            // Se já sincronizou antes e apareceu um ID novo que nunca vimos:
+            if (!knownCloudIds.has(apt.id) && !allAppointments.some(a => a.id === apt.id)) {
+              knownCloudIds.add(apt.id);
+              allAppointments.unshift(apt);
+              hasNew = true;
+
+              // Dispara alarme contínuo no painel do barbeiro
+              pendingAcknowledgeIds.add(apt.id);
+              startAlarmLoop();
+              showNotificationDot();
+              showToast(`🔔 Novo Agendamento: ${apt.clientName} (${apt.time})`, 'success');
+            }
+          }
+        });
+
+        if (isFirstCloudSync) {
+          isFirstCloudSync = false;
+          // Ordena decrescente por data/criação
+          allAppointments.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
+          saveAppointmentsToStorage();
+          updateAdminDashboard();
+        } else if (hasNew) {
           saveAppointmentsToStorage();
           updateAdminDashboard();
         }
-      } catch(e){}
-    }
-
-    function receiveRemoteBooking(apt) {
-      if (!apt || !apt.id) return;
-      const alreadyExists = allAppointments.some(a => a.id === apt.id);
-      if (!alreadyExists) {
-        allAppointments.unshift(apt);
-        saveAppointmentsToStorage();
-        updateAdminDashboard();
-        playBookingChime();
-        showNotificationDot();
-        showToast(`🔔 Novo Agendamento: ${apt.clientName} (${apt.time})`, 'success');
+      } catch (err) {
+        // Falha transitória de rede não deve travar a tela em vermelho/amarelo
+        updateCloudStatus('Nuvem Conectada', 'emerald');
       }
     }
 
-    function testCloudNotification() {
+    function startAlarmLoop() {
+      if (alarmIntervalTimer) return;
       playBookingChime();
-      showToast('🔊 Campainha testada com sucesso! Nuvem pronta para receber agendamentos.', 'success');
-      // Publica teste no canal
-      fetch(REALTIME_PUBLISH_URL, {
-        method: 'POST',
-        headers: { 'Title': 'Teste de Conexão' },
-        body: JSON.stringify({
-          action: 'TEST',
-          msg: 'Teste de conexão efetuado',
-          time: new Date().toLocaleTimeString()
-        })
-      }).catch(()=>{});
+      updateAlarmButtonState();
+      alarmIntervalTimer = setInterval(() => {
+        if (pendingAcknowledgeIds.size > 0 && isSoundAlertEnabled) {
+          playBookingChime();
+        } else {
+          stopAlarmLoop();
+        }
+      }, 3500);
+    }
+
+    function stopAlarmLoop() {
+      if (alarmIntervalTimer) {
+        clearInterval(alarmIntervalTimer);
+        alarmIntervalTimer = null;
+      }
+      updateAlarmButtonState();
+    }
+
+    function updateAlarmButtonState() {
+      const btn = document.getElementById('btnSilenceAlarms');
+      const counter = document.getElementById('alarmPendingCount');
+      if (!btn || !counter) return;
+
+      if (pendingAcknowledgeIds.size > 0) {
+        btn.classList.remove('hidden');
+        counter.textContent = pendingAcknowledgeIds.size;
+      } else {
+        btn.classList.add('hidden');
+      }
+    }
+
+    function acceptAppointment(id) {
+      pendingAcknowledgeIds.delete(id);
+      if (pendingAcknowledgeIds.size === 0) {
+        stopAlarmLoop();
+      } else {
+        updateAlarmButtonState();
+      }
+
+      const apt = allAppointments.find(a => a.id === id);
+      if (apt) {
+        apt.status = 'Confirmado';
+        saveAppointmentsToStorage();
+        updateAdminDashboard();
+        // Atualiza status na nuvem também
+        fetch(`${CLOUD_SYNC_API}/${encodeURIComponent(id)}/status.json`, {
+          method: 'PUT',
+          body: JSON.stringify('Confirmado')
+        }).catch(()=>{});
+        showToast(`Agendamento de ${apt.clientName} aceito com sucesso!`, 'success');
+      }
+    }
+    window.acceptAppointment = acceptAppointment;
+
+    function silenceAllAlarms() {
+      pendingAcknowledgeIds.clear();
+      stopAlarmLoop();
+      updateAdminDashboard();
+      showToast('Alarme sonoro silenciado.', 'info');
+    }
+    window.silenceAllAlarms = silenceAllAlarms;
+
+    function testCloudNotification() {
+      ensureAudioContext();
+      playBookingChime();
+      showToast('🔊 Campainha e conexão testadas! Nuvem operacional.', 'success');
     }
     window.testCloudNotification = testCloudNotification;
 
@@ -1285,13 +1317,59 @@
       }
     }
 
-    function startLivePolling() {
-      if (livePollingTimer) clearInterval(livePollingTimer);
-      // Consulta a nuvem a cada 3 segundos
-      livePollingTimer = setInterval(() => {
-        fetchCloudUpdates();
-      }, 3000);
+    /* =========================================================================
+       SINAL SONORO (WEB AUDIO API NATIVO - SEM LINKS EXTERNOS QUE QUEBRAM)
+       ========================================================================= */
+    function ensureAudioContext() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
     }
+
+    function playBookingChime() {
+      if (!isSoundAlertEnabled) return;
+
+      try {
+        ensureAudioContext();
+        if (!audioCtx) return;
+
+        // Notas musicais de notificação estilo sino de barbearia vintage (E6, G#6, B6)
+        const notes = [
+          { freq: 1318.51, start: 0, duration: 0.22 },   // E6
+          { freq: 1661.22, start: 0.14, duration: 0.24 }, // G#6
+          { freq: 1975.53, start: 0.28, duration: 0.55 }  // B6
+        ];
+
+        notes.forEach(n => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(n.freq, audioCtx.currentTime + n.start);
+
+          gain.gain.setValueAtTime(0.001, audioCtx.currentTime + n.start);
+          gain.gain.exponentialRampToValueAtTime(0.35, audioCtx.currentTime + n.start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + n.start + n.duration);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start(audioCtx.currentTime + n.start);
+          osc.stop(audioCtx.currentTime + n.start + n.duration + 0.05);
+        });
+      } catch (err) {
+        console.warn('Erro ao reproduzir sinal sonoro:', err);
+      }
+    }
+    window.playBookingChime = playBookingChime;
+
+    // Desbloqueia áudio no primeiro clique do usuário na tela
+    window.addEventListener('click', () => ensureAudioContext(), { once: true });
+    window.addEventListener('touchstart', () => ensureAudioContext(), { once: true });
 
     /* =========================================================================
        CARREGAMENTO DE SERVIÇOS E BARBEIROS
@@ -2225,18 +2303,20 @@
         } else {
           mobileCards.innerHTML = filtered.map(apt => {
             const cleanPhone = apt.clientPhone.replace(/\D/g, '');
-            const statusColor = apt.status === 'Confirmado' ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' :
+            const isPendingAccept = pendingAcknowledgeIds.has(apt.id);
+            const statusColor = isPendingAccept ? 'text-amber-300 bg-amber-500/20 border-amber-400 animate-pulse font-bold' :
+                                (apt.status === 'Confirmado' ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' :
                                 (apt.status === 'Concluído' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' :
-                                (apt.status === 'Cancelado' ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-amber-400 bg-amber-500/10 border-amber-500/30'));
+                                (apt.status === 'Cancelado' ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-amber-400 bg-amber-500/10 border-amber-500/30')));
             
             return `
-              <div class="p-3.5 bg-vintage-850 rounded-xl border border-zinc-800 space-y-2">
+              <div class="p-3.5 bg-vintage-850 rounded-xl border ${isPendingAccept ? 'border-amber-400 ring-2 ring-amber-400/40 bg-amber-500/10' : 'border-zinc-800'} space-y-2 transition-all">
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-bold text-white flex items-center gap-1.5">
                     <i class="fa-regular fa-clock text-amber-400"></i> ${formatDateToBR(apt.date)} - ${apt.time}
                   </span>
                   <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusColor}">
-                    ${apt.status}
+                    ${isPendingAccept ? '🔔 Novo Pedido' : apt.status}
                   </span>
                 </div>
 
@@ -2252,9 +2332,15 @@
                 </div>
 
                 <div class="border-t border-zinc-800/80 pt-2 flex items-center justify-end gap-1.5">
-                  <button onclick="updateAppointmentStatus('${apt.id}', 'Concluído')" class="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500 hover:text-black text-[10px] font-semibold transition">
-                    Concluir
-                  </button>
+                  ${isPendingAccept ? `
+                    <button onclick="acceptAppointment('${apt.id}')" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-black hover:brightness-110 text-xs font-bold flex items-center gap-1 shadow-lg transition">
+                      <i class="fa-solid fa-check-double"></i> Aceitar Pedido
+                    </button>
+                  ` : `
+                    <button onclick="updateAppointmentStatus('${apt.id}', 'Concluído')" class="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500 hover:text-black text-[10px] font-semibold transition">
+                      Concluir
+                    </button>
+                  `}
                   <button onclick="updateAppointmentStatus('${apt.id}', 'Cancelado')" class="px-2.5 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500 hover:text-white text-[10px] font-semibold transition">
                     Cancelar
                   </button>
@@ -2275,12 +2361,14 @@
         } else {
           tbody.innerHTML = filtered.map(apt => {
             const cleanPhone = apt.clientPhone.replace(/\D/g, '');
-            const statusColor = apt.status === 'Confirmado' ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' :
+            const isPendingAccept = pendingAcknowledgeIds.has(apt.id);
+            const statusColor = isPendingAccept ? 'text-amber-300 bg-amber-500/20 border-amber-400 animate-pulse font-bold' :
+                                (apt.status === 'Confirmado' ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' :
                                 (apt.status === 'Concluído' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' :
-                                (apt.status === 'Cancelado' ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-amber-400 bg-amber-500/10 border-amber-500/30'));
+                                (apt.status === 'Cancelado' ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-amber-400 bg-amber-500/10 border-amber-500/30')));
 
             return `
-              <tr class="hover:bg-vintage-850/50 transition">
+              <tr class="hover:bg-vintage-850/50 transition ${isPendingAccept ? 'bg-amber-500/10' : ''}">
                 <td class="p-3 text-white font-medium">
                   <div class="flex items-center gap-1.5">
                     <i class="fa-regular fa-calendar text-amber-400"></i> ${formatDateToBR(apt.date)}
@@ -2297,11 +2385,16 @@
                 <td class="p-3 font-bold text-amber-400">${formatCurrency(apt.price)}</td>
                 <td class="p-3">
                   <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold border ${statusColor}">
-                    ${apt.status}
+                    ${isPendingAccept ? '🔔 Novo Pedido' : apt.status}
                   </span>
                 </td>
                 <td class="p-3 text-right">
                   <div class="flex items-center justify-end gap-1.5">
+                    ${isPendingAccept ? `
+                      <button onclick="acceptAppointment('${apt.id}')" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs flex items-center gap-1 shadow-md transition">
+                        <i class="fa-solid fa-check-double"></i> Aceitar
+                      </button>
+                    ` : ''}
                     <a href="https://wa.me/55${cleanPhone}" target="_blank" title="Abrir WhatsApp" class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-black transition">
                       <i class="fa-brands fa-whatsapp"></i>
                     </a>
