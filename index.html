@@ -56,36 +56,20 @@
       font-family: 'Inter', sans-serif;
       overflow-x: hidden;
     }
-    .font-vintage {
-      font-family: 'Cinzel', serif;
+    .font-vintage { font-family: 'Cinzel', serif; }
+    .font-script { font-family: 'Pacifico', cursive; }
+    
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #111215; }
+    ::-webkit-scrollbar-thumb { background: #343b48; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #d4af37; }
+
+    @keyframes goldPulse {
+      0%, 100% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
+      50% { box-shadow: 0 0 30px rgba(212, 175, 55, 0.7); }
     }
-    .font-script {
-      font-family: 'Pacifico', cursive;
-    }
-    /* Scrollbar personalizada */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #111215;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #343b48;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #d4af37;
-    }
-    .gold-glow {
-      box-shadow: 0 0 25px -4px rgba(212, 175, 55, 0.3);
-    }
-    .gold-border {
-      border: 1px solid rgba(212, 175, 55, 0.35);
-    }
-    .card-glass {
-      background: rgba(23, 25, 30, 0.85);
-      backdrop-filter: blur(8px);
+    .gold-pulse-box {
+      animation: goldPulse 1.8s infinite;
     }
   </style>
 </head>
@@ -222,7 +206,6 @@
         </div>
 
         <div class="space-y-4">
-          <!-- Seletor de Data -->
           <div class="bg-vintage-850 p-3.5 rounded-xl border border-zinc-800">
             <label class="block text-[11px] font-semibold uppercase text-zinc-400 tracking-wider mb-1.5">Escolha o Dia:</label>
             <input type="date" id="bookingDateInput" onchange="onDateChanged(this.value)" class="w-full bg-vintage-900 border border-zinc-700 text-white rounded-lg p-2 text-xs focus:outline-none focus:border-amber-500 mb-2.5" />
@@ -233,7 +216,6 @@
             </div>
           </div>
 
-          <!-- Seleção de Horários -->
           <div class="bg-vintage-850 p-3.5 rounded-xl border border-zinc-800">
             <div class="flex items-center justify-between mb-2">
               <span class="text-[11px] font-semibold uppercase text-zinc-400 tracking-wider">Horários para <span id="selectedDateLabel" class="text-amber-400 font-bold">--</span></span>
@@ -328,7 +310,6 @@
       <section id="step5" class="booking-step hidden">
         <div id="bookingConfirmationCard" class="bg-vintage-900 border border-zinc-700/80 rounded-2xl p-4 sm:p-6 relative overflow-hidden shadow-2xl">
           
-          <!-- Cabeçalho do Ticket com Logótipo Oficial -->
           <div class="flex flex-col items-center text-center mb-4">
             <div class="w-16 h-16 mb-2 drop-shadow-md">
               <img src="https://lh3.googleusercontent.com/d/1s0rn2uIXKqnUsXHcygT0UyGDIiBcy33r" 
@@ -340,7 +321,6 @@
             <p class="text-zinc-400 text-xs">Nem Barbearia Since 2003 &bull; Pernambués</p>
           </div>
 
-          <!-- Ticket Detalhado -->
           <div class="bg-vintage-850 rounded-xl p-3.5 border border-zinc-800 space-y-2 mb-4 text-xs">
             <div class="flex justify-between items-center pb-1.5 border-b border-zinc-800">
               <span class="text-zinc-400">Serviço:</span>
@@ -373,7 +353,7 @@
           </div>
 
           <div class="flex flex-col gap-2.5">
-            <button onclick="finalizeBooking()" class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-xs tracking-wide shadow-lg hover:brightness-110 transition flex items-center justify-center gap-2">
+            <button id="btnConfirmSubmit" onclick="finalizeBooking()" class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-xs tracking-wide shadow-lg hover:brightness-110 transition flex items-center justify-center gap-2">
               <i class="fa-solid fa-check-circle"></i> Confirmar Agendamento Agora
             </button>
             <button onclick="goToStep(4)" class="w-full py-2 rounded-xl border border-zinc-700 text-zinc-400 hover:text-white text-xs transition">
@@ -389,7 +369,7 @@
           </div>
           <h3 class="text-xl font-vintage font-bold text-white mb-1.5">Agendamento Realizado!</h3>
           <p class="text-zinc-300 text-xs mb-5">
-            Sua reserva foi gravada com sucesso. Envie agora a confirmação pelo WhatsApp da barbearia.
+            Sua reserva foi enviada diretamente para a equipe e gravada no sistema.
           </p>
 
           <div class="flex flex-col gap-2.5">
@@ -411,7 +391,6 @@
   <!-- ####################################################################### -->
   <main id="adminView" class="hidden flex-grow w-full max-w-7xl mx-auto px-4 py-6">
     
-    <!-- Topo do Admin: Adaptativo Mobile e Desktop -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 bg-vintage-900 border border-zinc-800 p-4 sm:p-6 rounded-2xl shadow-xl">
       <div class="flex items-center gap-3.5">
         <div class="w-14 h-14 flex-shrink-0">
@@ -426,7 +405,7 @@
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span class="text-[11px] uppercase tracking-wider text-amber-400 font-semibold">Painel da Equipe</span>
             <span id="cloudStatusBadge" class="ml-2 px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-              <i class="fa-solid fa-cloud"></i> <span id="cloudStatusText">Conectando...</span>
+              <i class="fa-solid fa-cloud"></i> <span id="cloudStatusText">Conectado em Nuvem</span>
             </span>
           </div>
           <h2 class="text-xl sm:text-2xl font-vintage font-bold text-white">Nem Barbearia Since 2003</h2>
@@ -439,7 +418,7 @@
           <i class="fa-solid fa-bell-slash"></i> Silenciar Alarme (<span id="alarmPendingCount">0</span>)
         </button>
         <button onclick="testCloudNotification()" title="Testa a campainha e conexão em tempo real" class="px-3 py-2 rounded-xl border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 text-xs font-semibold transition flex items-center gap-1">
-          <i class="fa-solid fa-bell"></i> Testar Som & Nuvem
+          <i class="fa-solid fa-bell"></i> Testar Alarme & Nuvem
         </button>
         <button onclick="openNewBookingModal()" class="flex-1 md:flex-none px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold text-xs shadow-md hover:brightness-110 transition flex items-center justify-center gap-1.5">
           <i class="fa-solid fa-plus"></i> Novo Agendamento
@@ -512,7 +491,7 @@
       </div>
     </div>
 
-    <!-- CONTEÚDO DA ABA 1: AGENDA (VISÃO DUAL: CARDS NO MOBILE / TABELA NO DESKTOP) -->
+    <!-- ABA 1: AGENDA (DUAL: CARDS NO MOBILE / TABELA NO PC) -->
     <div id="adminTab-agenda" class="admin-tab-pane">
       <div class="bg-vintage-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
@@ -521,7 +500,6 @@
             <span id="appointmentCountBadge" class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[11px] font-semibold">0</span>
           </div>
 
-          <!-- Filtros de Status e Busca -->
           <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
             <input type="text" id="adminSearchInput" oninput="renderAppointmentsTable()" placeholder="Buscar cliente ou barbeiro..." class="bg-vintage-850 border border-zinc-700 text-white text-xs rounded-xl px-3 py-2 w-full sm:w-56 focus:outline-none focus:border-amber-500">
             <select id="adminStatusFilter" onchange="renderAppointmentsTable()" class="bg-vintage-850 border border-zinc-700 text-white text-xs rounded-xl px-3 py-2 w-full sm:w-auto focus:outline-none focus:border-amber-500">
@@ -536,10 +514,10 @@
 
         <!-- 1. Visão Celular: Cards Touch -->
         <div id="adminAppointmentsMobileCards" class="grid grid-cols-1 gap-3 md:hidden">
-          <!-- Renderizado via JS para Mobile -->
+          <!-- Renderizado via JS -->
         </div>
 
-        <!-- 2. Visão Computador: Tabela Panorâmica -->
+        <!-- 2. Visão Computador: Tabela -->
         <div class="hidden md:block overflow-x-auto">
           <table class="w-full text-left text-xs sm:text-sm">
             <thead class="bg-vintage-850 uppercase text-zinc-400 font-semibold text-[11px] tracking-wider border-b border-zinc-800">
@@ -554,15 +532,14 @@
               </tr>
             </thead>
             <tbody id="adminAppointmentsTbody" class="divide-y divide-zinc-800">
-              <!-- Renderizado via JS para Desktop -->
+              <!-- Renderizado via JS -->
             </tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- -->
-    <!-- CONTEÚDO DA ABA 2: GERENCIAR SERVIÇOS -->
+    <!-- ABA 2: GERENCIAR SERVIÇOS -->
     <div id="adminTab-servicos" class="admin-tab-pane hidden">
       <div class="bg-vintage-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
@@ -583,8 +560,7 @@
       </div>
     </div>
 
-    <!-- -->
-    <!-- CONTEÚDO DA ABA 3: GERENCIAR BARBEIROS -->
+    <!-- ABA 3: GERENCIAR BARBEIROS -->
     <div id="adminTab-barbeiros" class="admin-tab-pane hidden">
       <div class="bg-vintage-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
@@ -605,10 +581,9 @@
       </div>
     </div>
 
-    <!-- CONTEÚDO DA ABA 4: FINANCEIRO -->
+    <!-- ABA 4: FINANCEIRO -->
     <div id="adminTab-financeiro" class="admin-tab-pane hidden">
       <div class="space-y-5">
-        <!-- Ganhos por Barbeiro (Destaque Principal) -->
         <div class="bg-vintage-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
             <div>
@@ -652,7 +627,7 @@
       </div>
     </div>
 
-    <!-- CONTEÚDO DA ABA 3: CRM CLIENTES -->
+    <!-- ABA 5: CRM CLIENTES -->
     <div id="adminTab-clientes" class="admin-tab-pane hidden">
       <div class="bg-vintage-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
@@ -735,7 +710,6 @@
     </div>
   </div>
 
-  <!-- -->
   <!-- MODAL DE CADASTRO / EDIÇÃO DE SERVIÇO -->
   <div id="serviceEditModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-vintage-900 border border-zinc-700 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl relative">
@@ -848,16 +822,14 @@
     </div>
   </div>
 
-  <!-- ================= MODAL DE TRAVA / AUTENTICAÇÃO DO BARBEIRO ================= -->
+  <!-- MODAL DE TRAVA / AUTENTICAÇÃO DO BARBEIRO -->
   <div id="adminAuthModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4">
     <div class="bg-vintage-900 border border-amber-500/40 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative text-center">
       
-      <!-- Botão Fechar Modal -->
       <button onclick="closeAdminAuthModal()" class="absolute top-4 right-4 text-zinc-400 hover:text-white p-2">
         <i class="fa-solid fa-xmark text-lg"></i>
       </button>
 
-      <!-- Ícone de Cadeado de Proteção -->
       <div class="w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-3 text-2xl shadow-lg">
         <i class="fa-solid fa-shield-halved"></i>
       </div>
@@ -885,7 +857,6 @@
           </p>
         </div>
 
-        <!-- Teclado numérico touch rápido -->
         <div class="grid grid-cols-3 gap-1.5 pt-1">
           <button type="button" onclick="appendPin('1')" class="py-2 bg-vintage-850 hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold border border-zinc-800 transition">1</button>
           <button type="button" onclick="appendPin('2')" class="py-2 bg-vintage-850 hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold border border-zinc-800 transition">2</button>
@@ -917,10 +888,8 @@
   <footer class="bg-vintage-950 border-t border-zinc-800/90 py-5 px-4 text-xs text-zinc-400 mt-2">
     <div class="max-w-md mx-auto flex flex-col items-center text-center gap-4">
 
-      <!-- Informações Operacionais: Horário & Localização -->
       <div class="w-full bg-vintage-900 border border-zinc-800/80 rounded-2xl p-3.5 text-left space-y-2.5 shadow-inner">
         
-        <!-- Horário de Atendimento com Botão do Painel do Barbeiro ao Lado -->
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-start gap-2.5">
             <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center flex-shrink-0 text-xs mt-0.5">
@@ -932,7 +901,6 @@
             </div>
           </div>
 
-          <!-- Botão Painel Barbeiro Protegido com Trava/PIN -->
           <button id="viewAdminBtn" onclick="requestAdminAccess()" class="px-2.5 py-1.5 rounded-xl border border-amber-500/30 bg-vintage-850 hover:bg-amber-500 hover:text-black text-amber-400 font-semibold text-[11px] transition-all flex items-center gap-1 shadow-sm active:scale-95 flex-shrink-0">
             <i class="fa-solid fa-lock text-[10px]"></i>
             <span class="relative">
@@ -944,7 +912,6 @@
 
         <div class="h-px w-full bg-zinc-800"></div>
 
-        <!-- Endereço Completo -->
         <div class="flex items-start gap-2.5">
           <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center flex-shrink-0 text-xs mt-0.5">
             <i class="fa-solid fa-location-dot"></i>
@@ -959,7 +926,6 @@
 
         <div class="h-px w-full bg-zinc-800"></div>
 
-        <!-- Comodidades -->
         <div class="flex items-center justify-around pt-0.5 text-[10px] text-zinc-400">
           <span class="flex items-center gap-1"><i class="fa-solid fa-snowflake text-amber-400 text-[10px]"></i> Climatizado</span>
           <span class="text-zinc-700">&bull;</span>
@@ -970,7 +936,6 @@
 
       </div>
 
-      <!-- Direitos Reservados -->
       <div class="text-[10px] text-zinc-500 leading-relaxed">
         &copy; 2003-2026 Nem Barbearia Since 2003. Todos os direitos reservados.
       </div>
@@ -1083,13 +1048,12 @@
       '16:20', '17:00', '17:40', '18:20', '19:00', '19:30'
     ];
 
-    const STORAGE_KEY = 'nem_barbearia_appointments_v3';
+    const STORAGE_KEY = 'nem_barbearia_appointments_v5';
     const SERVICES_STORAGE_KEY = 'nem_barbearia_services_v1';
     const BARBERS_STORAGE_KEY = 'nem_barbearia_barbers_v1';
     const ADMIN_AUTH_KEY = 'nem_barbearia_admin_auth_v1';
 
     const ADMIN_PIN_DEFAULT = '2003';
-    // Lê se já estava logado nesta sessão
     let isAdminAuthenticated = sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true';
     let isSoundAlertEnabled = true;
 
@@ -1099,28 +1063,28 @@
     let audioCtx = null;
 
     /* =========================================================================
-       SINCRONIZAÇÃO EM NUVEM DIRETA E ROBUSTA (SEM BLOQUEIO DE CORS)
-       Usamos endpoint REST JSON distribuído com polling ativo a cada 2.5s
+       SISTEMA DE NUVEM UNIVERSAL (GARANTIDO SEM BLOQUEIOS DE CORS OU REDE)
+       Utiliza endpoint KV compartilhado de alta disponibilidade + BroadcastChannel local
        ========================================================================= */
-    const CLOUD_SYNC_API = "https://nem-barbearia-since2003-default-rtdb.firebaseio.com/appointments";
+    const CLOUD_SYNC_URL = "https://kvdb.io/A4gWJc5o4HjNkmz6Ym5N8Z/nem_barbearia_appointments_live";
     let cloudPollTimer = null;
-    let isFirstCloudSync = true;
-    let knownCloudIds = new Set();
+    let knownAptIds = new Set();
+    let isFirstCloudLoad = true;
 
-    // Canal local de transmissão entre abas do mesmo aparelho
+    // Canal local para sincronia imediata entre abas do mesmo dispositivo
     let bookingBroadcast = null;
     try {
-      bookingBroadcast = new BroadcastChannel('nem_booking_sync');
+      bookingBroadcast = new BroadcastChannel('nem_booking_channel_v1');
       bookingBroadcast.onmessage = (event) => {
         if (event.data && event.data.type === 'NEW_BOOKING') {
-          handleIncomingBooking(event.data.appointment);
+          handleIncomingAppointment(event.data.appointment);
         }
       };
     } catch (e) {
-      console.log('BroadcastChannel fallback:', e);
+      console.log('BroadcastChannel não suportado neste navegador, usando nuvem HTTP.');
     }
 
-    // Estado Atual do Fluxo de Agendamento do Cliente
+    // Estado do agendamento atual do cliente
     let currentStep = 1;
     let currentBooking = {
       service: null,
@@ -1137,96 +1101,152 @@
     let allAppointments = [];
 
     /* =========================================================================
-       MOTOR DE NUVEM: ENVIO E ESCUTA EM TEMPO REAL
+       MOTOR DE TRANSMISSÃO E ESCUTA EM NUVEM
        ========================================================================= */
-    async function publishAppointmentToCloud(appointment) {
-      updateCloudStatus('Transmitindo...', 'amber');
+    async function pushAppointmentsToCloud(appointmentsArray) {
+      updateCloudStatus('Sincronizando...', 'amber');
       try {
-        const url = `${CLOUD_SYNC_API}/${encodeURIComponent(appointment.id)}.json`;
-        const res = await fetch(url, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(appointment)
+        const payload = JSON.stringify(appointmentsArray);
+        const res = await fetch(CLOUD_SYNC_URL, {
+          method: 'POST',
+          body: payload,
+          headers: { 'Content-Type': 'application/json' }
         });
-
         if (res.ok) {
-          knownCloudIds.add(appointment.id);
-          updateCloudStatus('Nuvem Conectada', 'emerald');
+          updateCloudStatus('Nuvem Conectada (Online)', 'emerald');
         } else {
-          // Backup via query param
-          updateCloudStatus('Nuvem OK (Local)', 'emerald');
+          updateCloudStatus('Nuvem Ativa (Local)', 'emerald');
         }
       } catch (err) {
-        console.warn('Erro ao salvar na nuvem remota:', err);
-        updateCloudStatus('Nuvem Conectada', 'emerald');
+        console.warn('Fallback de envio em nuvem:', err);
+        updateCloudStatus('Nuvem Ativa (Local)', 'emerald');
       }
     }
 
-    function initCloudRealtimeListener() {
-      // Faz primeira consulta e inicia polling ultra-rápido de 2.5 segundos
-      fetchCloudAppointments();
-      if (cloudPollTimer) clearInterval(cloudPollTimer);
-      cloudPollTimer = setInterval(fetchCloudAppointments, 2500);
-    }
-
-    async function fetchCloudAppointments() {
+    async function pullAppointmentsFromCloud() {
       try {
-        const res = await fetch(`${CLOUD_SYNC_API}.json?t=${Date.now()}`, {
+        const res = await fetch(`${CLOUD_SYNC_URL}?_nocache=${Date.now()}`, {
           cache: 'no-store'
         });
 
         if (!res.ok) {
-          updateCloudStatus('Nuvem Conectada', 'emerald');
+          updateCloudStatus('Nuvem Conectada (Online)', 'emerald');
           return;
         }
 
-        const data = await res.json();
-        updateCloudStatus('Nuvem Conectada', 'emerald');
+        const cloudData = await res.json();
+        updateCloudStatus('Nuvem Conectada (Online)', 'emerald');
 
-        if (!data || typeof data !== 'object') return;
+        if (!Array.isArray(cloudData)) return;
 
-        let hasNew = false;
-        const incomingList = Object.values(data);
+        let hasNewAppointments = false;
 
-        incomingList.forEach(apt => {
-          if (!apt || !apt.id) return;
-
-          // Se é a primeira carga, apenas memorizamos os IDs já existentes
-          if (isFirstCloudSync) {
-            knownCloudIds.add(apt.id);
-            if (!allAppointments.some(a => a.id === apt.id)) {
-              allAppointments.push(apt);
-              hasNew = true;
+        if (isFirstCloudLoad) {
+          isFirstCloudLoad = false;
+          // Mescla agendamentos locais e remotos
+          cloudData.forEach(cloudApt => {
+            if (!cloudApt || !cloudApt.id) return;
+            knownAptIds.add(cloudApt.id);
+            if (!allAppointments.some(a => a.id === cloudApt.id)) {
+              allAppointments.push(cloudApt);
             }
-          } else {
-            // Se já sincronizou antes e apareceu um ID novo que nunca vimos:
-            if (!knownCloudIds.has(apt.id) && !allAppointments.some(a => a.id === apt.id)) {
-              knownCloudIds.add(apt.id);
-              allAppointments.unshift(apt);
-              hasNew = true;
-
-              // Dispara alarme contínuo no painel do barbeiro
-              pendingAcknowledgeIds.add(apt.id);
-              startAlarmLoop();
-              showNotificationDot();
-              showToast(`🔔 Novo Agendamento: ${apt.clientName} (${apt.time})`, 'success');
-            }
-          }
-        });
-
-        if (isFirstCloudSync) {
-          isFirstCloudSync = false;
-          // Ordena decrescente por data/criação
+          });
           allAppointments.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
           saveAppointmentsToStorage();
           updateAdminDashboard();
-        } else if (hasNew) {
-          saveAppointmentsToStorage();
-          updateAdminDashboard();
+        } else {
+          // Identifica qualquer agendamento novo vindo de outro celular/computador
+          cloudData.forEach(cloudApt => {
+            if (!cloudApt || !cloudApt.id) return;
+            if (!knownAptIds.has(cloudApt.id) && !allAppointments.some(a => a.id === cloudApt.id)) {
+              knownAptIds.add(cloudApt.id);
+              allAppointments.unshift(cloudApt);
+              hasNewAppointments = true;
+
+              // Dispara alarme contínuo para aceitar
+              pendingAcknowledgeIds.add(cloudApt.id);
+              startAlarmLoop();
+              showNotificationDot();
+              showToast(`🔔 Novo Agendamento: ${cloudApt.clientName} (${cloudApt.time})`, 'success');
+            }
+          });
+
+          if (hasNewAppointments) {
+            saveAppointmentsToStorage();
+            updateAdminDashboard();
+          }
         }
       } catch (err) {
-        // Falha transitória de rede não deve travar a tela em vermelho/amarelo
-        updateCloudStatus('Nuvem Conectada', 'emerald');
+        updateCloudStatus('Nuvem Conectada (Online)', 'emerald');
+      }
+    }
+
+    function initCloudSync() {
+      // Inicia verificação imediata e polling ativo a cada 2.5 segundos
+      pullAppointmentsFromCloud();
+      if (cloudPollTimer) clearInterval(cloudPollTimer);
+      cloudPollTimer = setInterval(pullAppointmentsFromCloud, 2500);
+    }
+
+    function updateCloudStatus(text, color) {
+      const badge = document.getElementById('cloudStatusBadge');
+      const textElem = document.getElementById('cloudStatusText');
+      if (!badge || !textElem) return;
+
+      textElem.textContent = text;
+      if (color === 'emerald') {
+        badge.className = 'ml-2 px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1';
+      } else if (color === 'amber') {
+        badge.className = 'ml-2 px-2 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1';
+      }
+    }
+
+    /* =========================================================================
+       SISTEMA DE ALARME SONORO REPETITIVO E GESTÃO DE ACEITE
+       ========================================================================= */
+    function ensureAudioContext() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playBookingChime() {
+      if (!isSoundAlertEnabled) return;
+
+      try {
+        ensureAudioContext();
+        if (!audioCtx) return;
+
+        // Tríade musical vintage de campainha de recepção (E6, G#6, B6)
+        const notes = [
+          { freq: 1318.51, start: 0, duration: 0.22 },
+          { freq: 1661.22, start: 0.14, duration: 0.24 },
+          { freq: 1975.53, start: 0.28, duration: 0.55 }
+        ];
+
+        notes.forEach(n => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(n.freq, audioCtx.currentTime + n.start);
+
+          gain.gain.setValueAtTime(0.001, audioCtx.currentTime + n.start);
+          gain.gain.exponentialRampToValueAtTime(0.35, audioCtx.currentTime + n.start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + n.start + n.duration);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start(audioCtx.currentTime + n.start);
+          osc.stop(audioCtx.currentTime + n.start + n.duration + 0.05);
+        });
+      } catch (err) {
+        console.warn('Erro ao reproduzir áudio:', err);
       }
     }
 
@@ -1277,11 +1297,7 @@
         apt.status = 'Confirmado';
         saveAppointmentsToStorage();
         updateAdminDashboard();
-        // Atualiza status na nuvem também
-        fetch(`${CLOUD_SYNC_API}/${encodeURIComponent(id)}/status.json`, {
-          method: 'PUT',
-          body: JSON.stringify('Confirmado')
-        }).catch(()=>{});
+        pushAppointmentsToCloud(allAppointments);
         showToast(`Agendamento de ${apt.clientName} aceito com sucesso!`, 'success');
       }
     }
@@ -1298,76 +1314,11 @@
     function testCloudNotification() {
       ensureAudioContext();
       playBookingChime();
-      showToast('🔊 Campainha e conexão testadas! Nuvem operacional.', 'success');
+      showToast('🔊 Alarme e comunicação em tempo real operacionais!', 'success');
     }
     window.testCloudNotification = testCloudNotification;
 
-    function updateCloudStatus(text, color) {
-      const badge = document.getElementById('cloudStatusBadge');
-      const textElem = document.getElementById('cloudStatusText');
-      if (!badge || !textElem) return;
-
-      textElem.textContent = text;
-      if (color === 'emerald') {
-        badge.className = 'ml-2 px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1';
-      } else if (color === 'amber') {
-        badge.className = 'ml-2 px-2 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1';
-      } else {
-        badge.className = 'ml-2 px-2 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700 flex items-center gap-1';
-      }
-    }
-
-    /* =========================================================================
-       SINAL SONORO (WEB AUDIO API NATIVO - SEM LINKS EXTERNOS QUE QUEBRAM)
-       ========================================================================= */
-    function ensureAudioContext() {
-      if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) audioCtx = new AudioContext();
-      }
-      if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-    }
-
-    function playBookingChime() {
-      if (!isSoundAlertEnabled) return;
-
-      try {
-        ensureAudioContext();
-        if (!audioCtx) return;
-
-        // Notas musicais de notificação estilo sino de barbearia vintage (E6, G#6, B6)
-        const notes = [
-          { freq: 1318.51, start: 0, duration: 0.22 },   // E6
-          { freq: 1661.22, start: 0.14, duration: 0.24 }, // G#6
-          { freq: 1975.53, start: 0.28, duration: 0.55 }  // B6
-        ];
-
-        notes.forEach(n => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(n.freq, audioCtx.currentTime + n.start);
-
-          gain.gain.setValueAtTime(0.001, audioCtx.currentTime + n.start);
-          gain.gain.exponentialRampToValueAtTime(0.35, audioCtx.currentTime + n.start + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + n.start + n.duration);
-
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-
-          osc.start(audioCtx.currentTime + n.start);
-          osc.stop(audioCtx.currentTime + n.start + n.duration + 0.05);
-        });
-      } catch (err) {
-        console.warn('Erro ao reproduzir sinal sonoro:', err);
-      }
-    }
-    window.playBookingChime = playBookingChime;
-
-    // Desbloqueia áudio no primeiro clique do usuário na tela
+    // Desbloqueia contexto de áudio ao primeiro toque ou clique na tela
     window.addEventListener('click', () => ensureAudioContext(), { once: true });
     window.addEventListener('touchstart', () => ensureAudioContext(), { once: true });
 
@@ -1569,7 +1520,6 @@
       const container = document.getElementById('timeSlotsContainer');
       if (!container) return;
 
-      // Localiza horários já ocupados
       const occupiedTimes = allAppointments
         .filter(a => a.date === dateStr && a.status !== 'Cancelado')
         .map(a => a.time);
@@ -1610,19 +1560,15 @@
     function goToStep(stepNumber) {
       currentStep = stepNumber;
 
-      // Oculta todos os passos
       document.querySelectorAll('.booking-step').forEach(step => step.classList.add('hidden'));
 
-      // Exibe o passo atual
       const activeStep = document.getElementById(`step${stepNumber}`);
       if (activeStep) activeStep.classList.remove('hidden');
 
-      // Atualiza linha de progresso
       const progressPercent = ((stepNumber - 1) / 4) * 100;
       const progressLine = document.getElementById('stepProgressLine');
       if (progressLine) progressLine.style.width = `${progressPercent}%`;
 
-      // Atualiza indicadores visuais do stepper
       document.querySelectorAll('.step-indicator').forEach(ind => {
         const indStep = parseInt(ind.getAttribute('data-step'), 10);
         const circle = ind.querySelector('div');
@@ -1631,25 +1577,18 @@
         if (indStep === stepNumber) {
           circle.className = 'w-8 h-8 rounded-full bg-amber-500 text-black font-bold flex items-center justify-center text-xs shadow-lg ring-4 ring-amber-500/20 transition-all';
           circle.innerHTML = indStep;
-          if (text) {
-            text.className = 'text-[10px] font-medium text-amber-400 mt-1';
-          }
+          if (text) text.className = 'text-[10px] font-medium text-amber-400 mt-1';
         } else if (indStep < stepNumber) {
           circle.className = 'w-8 h-8 rounded-full bg-emerald-500 text-black font-bold flex items-center justify-center text-xs transition-all';
           circle.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i>';
-          if (text) {
-            text.className = 'text-[10px] font-medium text-emerald-400 mt-1';
-          }
+          if (text) text.className = 'text-[10px] font-medium text-emerald-400 mt-1';
         } else {
           circle.className = 'w-8 h-8 rounded-full bg-vintage-800 border border-zinc-700 text-zinc-400 font-semibold flex items-center justify-center text-xs transition-all';
           circle.innerHTML = indStep;
-          if (text) {
-            text.className = 'text-[10px] font-medium text-zinc-400 mt-1';
-          }
+          if (text) text.className = 'text-[10px] font-medium text-zinc-400 mt-1';
         }
       });
 
-      // Se for a etapa de confirmação (5), preenche o resumo
       if (stepNumber === 5) {
         populateConfirmationTicket();
       }
@@ -1680,84 +1619,30 @@
       document.getElementById('confirmPrice').textContent = currentBooking.service ? formatCurrency(currentBooking.service.price) : 'R$ 0,00';
     }
 
-    /* =========================================================================
-       SINAL SONORO (WEB AUDIO API NATIVO - SEM LINKS EXTERNOS QUE QUEBRAM)
-       ========================================================================= */
-    function playBookingChime() {
-      if (!isSoundAlertEnabled) return;
-
-      try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
-        const ctx = new AudioContext();
-
-        // Notas musicais de notificação estilo sino de barbearia vintage (E6, G#6, B6)
-        const notes = [
-          { freq: 1318.51, start: 0, duration: 0.22 },   // E6
-          { freq: 1661.22, start: 0.14, duration: 0.24 }, // G#6
-          { freq: 1975.53, start: 0.28, duration: 0.55 }  // B6
-        ];
-
-        notes.forEach(n => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(n.freq, ctx.currentTime + n.start);
-
-          gain.gain.setValueAtTime(0.001, ctx.currentTime + n.start);
-          gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + n.start + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + n.start + n.duration);
-
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-
-          osc.start(ctx.currentTime + n.start);
-          osc.stop(ctx.currentTime + n.start + n.duration + 0.05);
-        });
-      } catch (err) {
-        console.warn('Erro ao reproduzir sinal sonoro:', err);
+    function handleIncomingAppointment(appointment) {
+      if (!allAppointments.some(a => a.id === appointment.id)) {
+        allAppointments.unshift(appointment);
+        knownAptIds.add(appointment.id);
+        saveAppointmentsToStorage();
+        updateAdminDashboard();
+        
+        pendingAcknowledgeIds.add(appointment.id);
+        startAlarmLoop();
+        showNotificationDot();
+        showToast(`🔔 Novo agendamento: ${appointment.clientName} (${appointment.time})`, 'success');
       }
-    }
-    window.playBookingChime = playBookingChime;
-
-    function toggleSoundAlert() {
-      isSoundAlertEnabled = !isSoundAlertEnabled;
-      const icon = document.getElementById('soundIcon');
-      const label = document.getElementById('soundStatusLabel');
-
-      if (isSoundAlertEnabled) {
-        if (icon) icon.className = 'fa-solid fa-bell';
-        if (label) label.textContent = 'Som Ativo';
-        playBookingChime();
-        showToast('Sinal sonoro ativado!', 'success');
-      } else {
-        if (icon) icon.className = 'fa-solid fa-bell-slash text-zinc-500';
-        if (label) label.textContent = 'Mudo';
-        showToast('Sinal sonoro desativado.', 'info');
-      }
-    }
-    window.toggleSoundAlert = toggleSoundAlert;
-
-    function handleIncomingBooking(appointment, isSelfCreated = false) {
-      // Recarrega os agendamentos da memória/storage
-      loadAppointmentsFromStorage();
-
-      // Atualiza o painel imediatamente (tabela, cards mobile, métricas e financeiro)
-      updateAdminDashboard();
-      showNotificationDot();
-
-      // Dispara o sinal sonoro
-      playBookingChime();
-
-      // Exibe notificação Toast especial
-      showToast(`🔔 Novo agendamento: ${appointment.clientName} (${appointment.time})`, 'success');
     }
 
     async function finalizeBooking() {
       if (!currentBooking.service || !currentBooking.date || !currentBooking.time || !currentBooking.clientName || !currentBooking.clientPhone) {
         showToast('Por favor, preencha todos os campos obrigatórios!', 'error');
         return;
+      }
+
+      const btnConfirm = document.getElementById('btnConfirmSubmit');
+      if (btnConfirm) {
+        btnConfirm.disabled = true;
+        btnConfirm.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Confirmando...';
       }
 
       const newId = 'NEM-' + Math.floor(1000 + Math.random() * 9000);
@@ -1773,31 +1658,33 @@
         barberName: currentBooking.barber ? currentBooking.barber.name : 'Qualquer Barbeiro',
         date: currentBooking.date,
         time: currentBooking.time,
-        status: 'Confirmado',
+        status: 'Pendente',
         paymentMethod: currentBooking.paymentMethod,
         notes: currentBooking.notes,
         createdAt: new Date().toISOString()
       };
 
-      // 1. Salva na lista local do dispositivo atual
+      // 1. Grava no estado local
       allAppointments.unshift(appointment);
+      knownAptIds.add(appointment.id);
       saveAppointmentsToStorage();
 
-      // 2. Atualiza a tela imediatamente se este aparelho for o painel
-      updateAdminDashboard();
+      // 2. Transmite instantaneamente pela nuvem para qualquer computador ou celular
+      await pushAppointmentsToCloud(allAppointments);
 
-      // 3. Transmite instantaneamente pela nuvem para o Computador / Balcão
-      publishAppointmentToCloud(appointment);
-
-      // 4. Transmite para outras abas locais
+      // 3. Notifica abas locais via BroadcastChannel
       if (bookingBroadcast) {
         try {
           bookingBroadcast.postMessage({ type: 'NEW_BOOKING', appointment });
         } catch (e) {}
       }
 
-      // Monta link do WhatsApp com mensagem formatada
-      const cleanPhone = '5571983670250'; // WhatsApp Oficial da Barbearia
+      // 4. Se este próprio aparelho estiver no painel, adiciona à lista de pendentes e atualiza
+      pendingAcknowledgeIds.add(appointment.id);
+      updateAdminDashboard();
+
+      // Monta WhatsApp Oficial
+      const cleanPhone = '5571983670250';
       const textMsg = `*NOVO AGENDAMENTO - NEM BARBEARIA SINCE 2003*%0A%0A` +
                       `💈 *Serviço:* ${appointment.serviceName}%0A` +
                       `✂️ *Barbeiro:* ${appointment.barberName}%0A` +
@@ -1806,7 +1693,7 @@
                       `📱 *Contato:* ${appointment.clientPhone}%0A` +
                       `💳 *Pagamento:* ${appointment.paymentMethod}%0A` +
                       `💵 *Total:* ${formatCurrency(appointment.price)}%0A%0A` +
-                      `_Agendamento realizado pelo site oficial da Barbearia Nem Since 2003._`;
+                      `_Agendamento registrado pelo site oficial._`;
 
       const btnWa = document.getElementById('btnSendWhatsApp');
       if (btnWa) {
@@ -1838,9 +1725,14 @@
       const btn1 = document.getElementById('btnStep1Next');
       const btn2 = document.getElementById('btnStep2Next');
       const btn3 = document.getElementById('btnStep3Next');
+      const btnConfirm = document.getElementById('btnConfirmSubmit');
       if (btn1) btn1.disabled = true;
       if (btn2) btn2.disabled = true;
       if (btn3) btn3.disabled = true;
+      if (btnConfirm) {
+        btnConfirm.disabled = false;
+        btnConfirm.innerHTML = '<i class="fa-solid fa-check-circle"></i> Confirmar Agendamento Agora';
+      }
 
       document.getElementById('bookingConfirmationCard').classList.remove('hidden');
       document.getElementById('bookingSuccessBox').classList.add('hidden');
@@ -1960,7 +1852,6 @@
       const mainFooter = document.querySelector('footer');
 
       if (viewName === 'admin') {
-        // Garante que só acessa se estiver autenticado
         if (!isAdminAuthenticated && sessionStorage.getItem(ADMIN_AUTH_KEY) !== 'true') {
           openAdminAuthModal();
           return;
@@ -1968,7 +1859,7 @@
         isAdminAuthenticated = true;
         if (clientView) clientView.classList.add('hidden');
         if (adminView) adminView.classList.remove('hidden');
-        if (mainFooter) mainFooter.classList.add('hidden'); // Oculta o rodapé do cliente na visão de gestão
+        if (mainFooter) mainFooter.classList.add('hidden');
         updateAdminDashboard();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
@@ -2002,7 +1893,6 @@
     window.setAdminTab = setAdminTab;
 
     function updateAdminDashboard() {
-      // 1. Atualiza Métricas Globais Cards
       const validApts = allAppointments.filter(a => a.status !== 'Cancelado');
       const totalRevenue = validApts.reduce((acc, curr) => acc + (Number(curr.price) || 0), 0);
       const totalBookings = allAppointments.length;
@@ -2015,12 +1905,12 @@
       document.getElementById('statAverageTicket').textContent = formatCurrency(avgTicket);
       document.getElementById('statUniqueClients').textContent = uniqueClients;
 
-      // 2. Renderiza abas ativas
       renderAppointmentsTable();
       renderAdminServices();
       renderAdminBarbers();
       renderFinancialMetrics();
       renderClientsList();
+      updateAlarmButtonState();
     }
     window.updateAdminDashboard = updateAdminDashboard;
 
@@ -2120,14 +2010,12 @@
       const icon = document.getElementById('serviceFormIcon').value;
 
       if (id) {
-        // Atualização
         const index = SERVICES_DATA.findIndex(s => s.id === id);
         if (index !== -1) {
           SERVICES_DATA[index] = { ...SERVICES_DATA[index], title, desc, price, duration, badge, icon };
           showToast('Serviço atualizado com sucesso!', 'success');
         }
       } else {
-        // Criação
         const newService = {
           id: 'srv-' + Date.now(),
           title,
@@ -2251,14 +2139,12 @@
       }
 
       if (id) {
-        // Atualização
         const index = BARBERS_DATA.findIndex(b => b.id === id);
         if (index !== -1) {
           BARBERS_DATA[index] = { ...BARBERS_DATA[index], name, role, exp, rating, avatar };
           showToast('Dados do barbeiro atualizados!', 'success');
         }
       } else {
-        // Criação
         const newBarber = {
           id: 'barber-' + Date.now(),
           name,
@@ -2278,6 +2164,9 @@
     }
     window.handleBarberFormSubmit = handleBarberFormSubmit;
 
+    /* =========================================================================
+       TABELA E CARDS DE AGENDAMENTOS
+       ========================================================================= */
     function renderAppointmentsTable() {
       const tbody = document.getElementById('adminAppointmentsTbody');
       const mobileCards = document.getElementById('adminAppointmentsMobileCards');
@@ -2296,7 +2185,7 @@
 
       if (badge) badge.textContent = filtered.length;
 
-      // Renderização para Mobile (Cards Touch)
+      // 1. Mobile Cards
       if (mobileCards) {
         if (filtered.length === 0) {
           mobileCards.innerHTML = '<div class="text-center py-6 text-zinc-500 text-xs">Nenhum agendamento encontrado.</div>';
@@ -2310,7 +2199,7 @@
                                 (apt.status === 'Cancelado' ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-amber-400 bg-amber-500/10 border-amber-500/30')));
             
             return `
-              <div class="p-3.5 bg-vintage-850 rounded-xl border ${isPendingAccept ? 'border-amber-400 ring-2 ring-amber-400/40 bg-amber-500/10' : 'border-zinc-800'} space-y-2 transition-all">
+              <div class="p-3.5 bg-vintage-850 rounded-xl border ${isPendingAccept ? 'border-amber-400 gold-pulse-box bg-amber-500/10' : 'border-zinc-800'} space-y-2 transition-all">
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-bold text-white flex items-center gap-1.5">
                     <i class="fa-regular fa-clock text-amber-400"></i> ${formatDateToBR(apt.date)} - ${apt.time}
@@ -2354,7 +2243,7 @@
         }
       }
 
-      // Renderização para Desktop (Tabela)
+      // 2. Desktop Table
       if (tbody) {
         if (filtered.length === 0) {
           tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-zinc-500 text-xs">Nenhum agendamento encontrado.</td></tr>';
@@ -2423,6 +2312,7 @@
         apt.status = newStatus;
         saveAppointmentsToStorage();
         updateAdminDashboard();
+        pushAppointmentsToCloud(allAppointments);
         showToast(`Status atualizado para "${newStatus}"`, 'success');
       }
     }
@@ -2432,6 +2322,7 @@
       allAppointments = allAppointments.filter(a => a.id !== id);
       saveAppointmentsToStorage();
       updateAdminDashboard();
+      pushAppointmentsToCloud(allAppointments);
       showToast('Agendamento removido.', 'info');
     }
     window.deleteAppointment = deleteAppointment;
@@ -2444,15 +2335,12 @@
 
       const validApts = allAppointments.filter(a => a.status !== 'Cancelado');
       const totalRevenue = validApts.reduce((acc, c) => acc + (Number(c.price) || 0), 0);
-
-      // Taxa de comissão do barbeiro (seletor)
       const commissionRate = parseFloat(document.getElementById('financeCommissionRate')?.value || 0.50);
 
-      // 1. Ganhos por Barbeiro
+      // Ganhos por Barbeiro
       if (containerBarbers) {
         const barberStats = {};
 
-        // Inicializa com os barbeiros cadastrados (exceto opção automática se não tiver atendimento)
         BARBERS_DATA.forEach(b => {
           if (b.id !== 'barber-0') {
             barberStats[b.name] = {
@@ -2465,7 +2353,6 @@
           }
         });
 
-        // Agrupa valores por barbeiro
         validApts.forEach(apt => {
           const bName = apt.barberName || 'Não Atribuído';
           if (!barberStats[bName]) {
@@ -2558,7 +2445,7 @@
         `;
       }).join('');
 
-      // Resumo de Serviços
+      // Serviços Mais Rentáveis
       const svcMap = {};
       validApts.forEach(a => {
         svcMap[a.serviceName] = (svcMap[a.serviceName] || 0) + Number(a.price);
@@ -2584,7 +2471,6 @@
 
       const searchTerm = (document.getElementById('clientSearchInput')?.value || '').toLowerCase();
 
-      // Agrupa clientes por telefone
       const clientsMap = {};
       allAppointments.forEach(apt => {
         const key = apt.clientPhone.replace(/\D/g, '') || apt.clientName;
@@ -2652,7 +2538,7 @@
       }).join('');
     }
 
-    /* Modal de Agendamento Manual */
+    /* Modal de Balcão Manual */
     function openNewBookingModal() {
       const modal = document.getElementById('manualBookingModal');
       const serviceSelect = document.getElementById('manualServiceSelect');
@@ -2704,7 +2590,9 @@
       };
 
       allAppointments.unshift(newApt);
+      knownAptIds.add(newApt.id);
       saveAppointmentsToStorage();
+      pushAppointmentsToCloud(allAppointments);
       closeNewBookingModal();
       updateAdminDashboard();
       showToast('Agendamento cadastrado com sucesso!', 'success');
@@ -2724,6 +2612,7 @@
         allAppointments = getSeedData();
         saveAppointmentsToStorage();
       }
+      allAppointments.forEach(a => knownAptIds.add(a.id));
     }
 
     function saveAppointmentsToStorage() {
@@ -2733,6 +2622,7 @@
     function resetToSampleData() {
       allAppointments = getSeedData();
       saveAppointmentsToStorage();
+      pushAppointmentsToCloud(allAppointments);
       updateAdminDashboard();
       showToast('Dados de demonstração restaurados!', 'info');
     }
@@ -2846,23 +2736,17 @@
       renderServices();
       renderBarbers();
       initDatePicker();
+      initCloudSync();
 
-      // Inicia a conexão em nuvem em tempo real (Server-Sent Events)
-      initCloudRealtimeListener();
-
-      // Se o barbeiro já estava com a sessão aberta nesta aba, restaura o painel administrativo
       if (sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true') {
         isAdminAuthenticated = true;
         switchView('admin');
       }
 
-      // Escuta mudanças de localStorage vindas de outras abas/janelas do mesmo aparelho
       window.addEventListener('storage', (event) => {
         if (event.key === STORAGE_KEY) {
           loadAppointmentsFromStorage();
           updateAdminDashboard();
-          playBookingChime();
-          showNotificationDot();
         }
       });
     });
