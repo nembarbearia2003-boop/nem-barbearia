@@ -119,12 +119,14 @@
   <!-- ####################################################################### -->
   <main id="clientView" class="flex-grow w-full max-w-md mx-auto px-3.5 pt-4 pb-4">
     
-    <!-- Topo Limpo: Apenas a Logo Oficial Centralizada com Brilho Dourado Suave -->
+    <!-- Topo Limpo: Apenas a Logo Oficial Centralizada com Brilho Dourado Suave (Toque Triplo Secreto para Equipe) -->
     <div class="relative overflow-hidden rounded-3xl bg-gradient-to-b from-vintage-900 to-vintage-850 border border-zinc-800/80 p-5 mb-5 shadow-xl text-center">
-      <div class="w-32 h-32 sm:w-36 sm:h-36 mx-auto rounded-full p-1 bg-gradient-to-b from-amber-500/40 via-amber-500/10 to-transparent shadow-[0_0_35px_rgba(212,175,55,0.25)] transition-transform duration-300 hover:scale-105">
+      <div id="secretLogoTrigger" 
+           title="Barbearia Nem Since 2003"
+           class="w-32 h-32 sm:w-36 sm:h-36 mx-auto rounded-full p-1 bg-gradient-to-b from-amber-500/40 via-amber-500/10 to-transparent shadow-[0_0_35px_rgba(212,175,55,0.25)] transition-transform duration-300 hover:scale-105 cursor-pointer select-none active:scale-95">
         <img src="https://lh3.googleusercontent.com/d/1s0rn2uIXKqnUsXHcygT0UyGDIiBcy33r" 
              alt="Barbearia Nem Since 2003" 
-             class="w-full h-full object-contain rounded-full shadow-2xl" 
+             class="w-full h-full object-contain rounded-full shadow-2xl pointer-events-none" 
              onerror="this.onerror=null; this.src='https://drive.google.com/thumbnail?id=1s0rn2uIXKqnUsXHcygT0UyGDIiBcy33r&sz=w800';" />
       </div>
     </div>
@@ -923,24 +925,14 @@
 
       <div class="w-full bg-vintage-900 border border-zinc-800/80 rounded-2xl p-3.5 text-left space-y-2.5 shadow-inner">
         
-        <div class="flex items-center justify-between gap-2">
-          <div class="flex items-start gap-2.5">
-            <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center flex-shrink-0 text-xs mt-0.5">
-              <i class="fa-solid fa-clock"></i>
-            </div>
-            <div>
-              <span class="text-[9px] uppercase font-bold tracking-wider text-zinc-400 block">Horário de Funcionamento</span>
-              <span class="text-xs font-semibold text-white">Seg. a Dom: 09h às 20h</span>
-            </div>
+        <div class="flex items-start gap-2.5">
+          <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center flex-shrink-0 text-xs mt-0.5">
+            <i class="fa-solid fa-clock"></i>
           </div>
-
-          <button id="viewAdminBtn" onclick="requestAdminAccess()" class="px-2.5 py-1.5 rounded-xl border border-amber-500/30 bg-vintage-850 hover:bg-amber-500 hover:text-black text-amber-400 font-semibold text-[11px] transition-all flex items-center gap-1 shadow-sm active:scale-95 flex-shrink-0">
-            <i class="fa-solid fa-lock text-[10px]"></i>
-            <span class="relative">
-              Painel Barbeiro
-              <span id="pendingNotificationDot" class="hidden absolute -top-1 -right-2 w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-            </span>
-          </button>
+          <div>
+            <span class="text-[9px] uppercase font-bold tracking-wider text-zinc-400 block">Horário de Funcionamento</span>
+            <span class="text-xs font-semibold text-white">Seg. a Dom: 09h às 20h</span>
+          </div>
         </div>
 
         <div class="h-px w-full bg-zinc-800"></div>
@@ -1095,6 +1087,10 @@
     let audioCtx = null;
     let isAudioUnlocked = false;
 
+    // Controle de cliques secretos na logo para acesso do barbeiro
+    let secretLogoClicks = 0;
+    let secretLogoTimeout = null;
+
     /* =========================================================================
        NUVEM DE ALTA DISPONIBILIDADE REAL (FIREBASE REST + NTFY STREAM + BROADCAST)
        Garante que o celular consiga gravar e o computador receber instantaneamente
@@ -1199,7 +1195,9 @@
     }
 
     function startAlarmLoop() {
-      // Dispara imediatamente o primeiro som
+      // O som contínuo e o banner só devem rodar se a equipe estiver autenticada no painel
+      if (!isAdminAuthenticated) return;
+
       playAudibleAlarmChime();
 
       const banner = document.getElementById('persistentAlarmBanner');
@@ -1209,7 +1207,7 @@
       
       // Repete a cada 2.8 segundos sem parar até que seja aceito
       alarmIntervalTimer = setInterval(() => {
-        if (pendingAcknowledgeIds.size > 0) {
+        if (pendingAcknowledgeIds.size > 0 && isAdminAuthenticated) {
           playAudibleAlarmChime();
           updateAlarmButtonState();
         } else {
@@ -1403,7 +1401,7 @@
         });
         allAppointments.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
         saveAppointmentsToStorage();
-        updateAdminDashboard();
+        if (isAdminAuthenticated) updateAdminDashboard();
       } else {
         cloudList.forEach(item => {
           if (!item || !item.id) return;
@@ -1412,17 +1410,18 @@
             allAppointments.unshift(item);
             hasNewIncoming = true;
 
-            // Adiciona ao alarme repetitivo
-            pendingAcknowledgeIds.add(item.id);
-            startAlarmLoop();
-            showNotificationDot();
-            showToast(`🔔 NOVO AGENDAMENTO: ${item.clientName} (${item.time})`, 'success');
+            // Só ativa o alarme sonoro se for a tela do barbeiro
+            if (isAdminAuthenticated) {
+              pendingAcknowledgeIds.add(item.id);
+              startAlarmLoop();
+              showToast(`🔔 NOVO AGENDAMENTO: ${item.clientName} (${item.time})`, 'success');
+            }
           }
         });
 
         if (hasNewIncoming) {
           saveAppointmentsToStorage();
-          updateAdminDashboard();
+          if (isAdminAuthenticated) updateAdminDashboard();
         }
       }
     }
@@ -1827,11 +1826,6 @@
         } catch (e) {}
       }
 
-      // 4. Se a mesma máquina estiver logada no painel, adiciona ao alarme pendente
-      pendingAcknowledgeIds.add(appointment.id);
-      startAlarmLoop();
-      updateAdminDashboard();
-
       // Monta WhatsApp Oficial
       const cleanPhone = '5571983670250';
       const textMsg = `*NOVO AGENDAMENTO - NEM BARBEARIA SINCE 2003*%0A%0A` +
@@ -1851,7 +1845,7 @@
 
       document.getElementById('bookingConfirmationCard').classList.add('hidden');
       document.getElementById('bookingSuccessBox').classList.remove('hidden');
-      showToast('Agendamento enviado para a Barbearia!', 'success');
+      showToast('Agendamento realizado com sucesso!', 'success');
     }
     window.finalizeBooking = finalizeBooking;
 
@@ -1993,6 +1987,11 @@
     function logoutAdmin() {
       isAdminAuthenticated = false;
       sessionStorage.removeItem(ADMIN_AUTH_KEY);
+      stopAlarmLoop();
+      // Remove hash da URL caso exista
+      if (window.location.hash === '#painel' || window.location.hash === '#admin') {
+        history.replaceState(null, null, window.location.pathname);
+      }
       switchView('client');
       showToast('Sessão bloqueada.', 'info');
     }
@@ -2870,7 +2869,43 @@
         switchView('admin');
       }
 
-      // 5. Desbloqueia áudio no primeiro clique ou toque
+      // 5. Verifica se foi acessado diretamente pela URL com #painel ou #admin
+      if (window.location.hash === '#painel' || window.location.hash === '#admin') {
+        requestAdminAccess();
+      }
+      window.addEventListener('hashchange', () => {
+        if (window.location.hash === '#painel' || window.location.hash === '#admin') {
+          requestAdminAccess();
+        }
+      });
+
+      // 6. Atalho Secreto por Toque Triplo na Logo
+      const logoTrigger = document.getElementById('secretLogoTrigger');
+      if (logoTrigger) {
+        logoTrigger.addEventListener('click', () => {
+          secretLogoClicks++;
+          if (secretLogoTimeout) clearTimeout(secretLogoTimeout);
+
+          if (secretLogoClicks >= 3) {
+            secretLogoClicks = 0;
+            requestAdminAccess();
+          } else {
+            secretLogoTimeout = setTimeout(() => {
+              secretLogoClicks = 0;
+            }, 900);
+          }
+        });
+      }
+
+      // 7. Atalho de Teclado no PC: Ctrl + B ou Alt + B
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.altKey) && (e.key === 'b' || e.key === 'B')) {
+          e.preventDefault();
+          requestAdminAccess();
+        }
+      });
+
+      // 8. Desbloqueia áudio no primeiro clique ou toque
       ['click', 'touchstart', 'keydown'].forEach(evt => {
         window.addEventListener(evt, () => unlockAudioSystem(), { once: true });
       });
