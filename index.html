@@ -1096,14 +1096,12 @@
     let isAudioUnlocked = false;
 
     /* =========================================================================
-       NUVEM DE ALTA DISPONIBILIDADE (DUAL ENGINE: JSONSTORAGE + KVDB + BROADCAST)
-       Garante que o envio do celular sempre atinja o computador mesmo com restrições
+       NUVEM DE ALTA DISPONIBILIDADE REAL (FIREBASE REST + NTFY STREAM + BROADCAST)
+       Garante que o celular consiga gravar e o computador receber instantaneamente
        ========================================================================= */
-    const CLOUD_ENDPOINTS = [
-      "https://api.jsonstorage.net/v1/json/00000000-0000-0000-0000-000000000000/nem-barbearia-live-2003",
-      "https://kvdb.io/A4gWJc5o4HjNkmz6Ym5N8Z/nem_barbearia_live_v2"
-    ];
-    let activeEndpointIndex = 0;
+    const PRIMARY_CLOUD_URL = "https://nem-barbearia-2003-default-rtdb.firebaseio.com/appointments";
+    const BACKUP_NTFY_TOPIC = "nem_barbearia_pedidos_live_2003";
+    
     let cloudPollTimer = null;
     let knownAptIds = new Set();
     let isInitialFetchDone = false;
@@ -1310,88 +1308,129 @@
        NUVEM BIDIRECIONAL ROBUSTA COM RETRY AUTOMÁTICO
        ========================================================================= */
     async function pushAppointmentsToCloud(appointmentsArray) {
-      const endpoint = CLOUD_ENDPOINTS[activeEndpointIndex];
+      // 1. Tenta envio no canal primário (Firebase REST PUT)
       try {
-        const res = await fetch(endpoint, {
-          method: 'POST',
+        await fetch(`${PRIMARY_CLOUD_URL}.json`, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(appointmentsArray)
         });
-        if (res.ok) {
-          updateCloudStatus('Nuvem Sincronizada', 'emerald');
-        } else {
-          // Alterna para endpoint secundário se houver falha
-          activeEndpointIndex = (activeEndpointIndex + 1) % CLOUD_ENDPOINTS.length;
-        }
+        updateCloudStatus('Nuvem Sincronizada', 'emerald');
       } catch (err) {
-        activeEndpointIndex = (activeEndpointIndex + 1) % CLOUD_ENDPOINTS.length;
-        console.warn('Aviso de envio nuvem, tentando failover:', err);
+        console.warn('Tentando canal de contingência...');
+      }
+
+      // 2. Dispara sinal via ntfy (CORS aberto sem auth) com o agendamento mais recente
+      if (appointmentsArray.length > 0) {
+        try {
+          const latestApt = appointmentsArray[0];
+          await fetch(`https://ntfy.sh/${BACKUP_NTFY_TOPIC}`, {
+            method: 'POST',
+            body: JSON.stringify(latestApt),
+            headers: {
+              'Title': 'Novo Agendamento Barbearia Nem',
+              'Priority': 'urgent',
+              'Tags': 'barber_pole,bell'
+            }
+          });
+        } catch (e) {
+          console.warn('Backup push ntfy:', e);
+        }
       }
     }
 
     async function pullAppointmentsFromCloud() {
-      const endpoint = CLOUD_ENDPOINTS[activeEndpointIndex] + `?_t=${Date.now()}`;
       try {
-        const res = await fetch(endpoint, {
+        const res = await fetch(`${PRIMARY_CLOUD_URL}.json?_t=${Date.now()}`, {
           method: 'GET',
           cache: 'no-store'
         });
 
-        if (!res.ok) {
-          activeEndpointIndex = (activeEndpointIndex + 1) % CLOUD_ENDPOINTS.length;
-          return;
-        }
+        if (res.ok) {
+          const data = await res.json();
+          updateCloudStatus('Nuvem Online & Conectada', 'emerald');
 
-        const data = await res.json();
-        updateCloudStatus('Nuvem Online & Conectada', 'emerald');
+          let incomingList = [];
+          if (Array.isArray(data)) {
+            incomingList = data.filter(Boolean);
+          } else if (data && typeof data === 'object') {
+            incomingList = Object.values(data).filter(Boolean);
+          }
 
-        if (!Array.isArray(data)) return;
-
-        let hasNewIncoming = false;
-
-        if (!isInitialFetchDone) {
-          isInitialFetchDone = true;
-          data.forEach(item => {
-            if (!item || !item.id) return;
-            knownAptIds.add(item.id);
-            if (!allAppointments.some(a => a.id === item.id)) {
-              allAppointments.push(item);
-            }
-          });
-          allAppointments.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
-          saveAppointmentsToStorage();
-          updateAdminDashboard();
-        } else {
-          // Checa se há agendamentos novos enviados recentemente
-          data.forEach(item => {
-            if (!item || !item.id) return;
-            if (!knownAptIds.has(item.id) && !allAppointments.some(a => a.id === item.id)) {
-              knownAptIds.add(item.id);
-              allAppointments.unshift(item);
-              hasNewIncoming = true;
-
-              // Adiciona ao alarme repetitivo
-              pendingAcknowledgeIds.add(item.id);
-              startAlarmLoop();
-              showNotificationDot();
-              showToast(`🔔 NOVO AGENDAMENTO: ${item.clientName} (${item.time})`, 'success');
-            }
-          });
-
-          if (hasNewIncoming) {
-            saveAppointmentsToStorage();
-            updateAdminDashboard();
+          if (incomingList.length > 0) {
+            processIncomingCloudList(incomingList);
+            return;
           }
         }
       } catch (err) {
-        updateCloudStatus('Nuvem Ativa (Local)', 'emerald');
+        // Falha no primário, tenta consultar via ntfy cache
+      }
+
+      // Consulta de contingência no tópico ntfy
+      try {
+        const ntfyRes = await fetch(`https://ntfy.sh/${BACKUP_NTFY_TOPIC}/json?poll=1&since=12h`);
+        if (ntfyRes.ok) {
+          const text = await ntfyRes.text();
+          const lines = text.trim().split('\n').filter(Boolean);
+          const ntfyApts = [];
+          lines.forEach(line => {
+            try {
+              const parsed = JSON.parse(line);
+              if (parsed.message) {
+                const aptData = JSON.parse(parsed.message);
+                if (aptData && aptData.id) ntfyApts.push(aptData);
+              }
+            } catch (e) {}
+          });
+          if (ntfyApts.length > 0) {
+            processIncomingCloudList(ntfyApts);
+          }
+        }
+      } catch (e) {}
+    }
+
+    function processIncomingCloudList(cloudList) {
+      let hasNewIncoming = false;
+
+      if (!isInitialFetchDone) {
+        isInitialFetchDone = true;
+        cloudList.forEach(item => {
+          if (!item || !item.id) return;
+          knownAptIds.add(item.id);
+          if (!allAppointments.some(a => a.id === item.id)) {
+            allAppointments.push(item);
+          }
+        });
+        allAppointments.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
+        saveAppointmentsToStorage();
+        updateAdminDashboard();
+      } else {
+        cloudList.forEach(item => {
+          if (!item || !item.id) return;
+          if (!knownAptIds.has(item.id) && !allAppointments.some(a => a.id === item.id)) {
+            knownAptIds.add(item.id);
+            allAppointments.unshift(item);
+            hasNewIncoming = true;
+
+            // Adiciona ao alarme repetitivo
+            pendingAcknowledgeIds.add(item.id);
+            startAlarmLoop();
+            showNotificationDot();
+            showToast(`🔔 NOVO AGENDAMENTO: ${item.clientName} (${item.time})`, 'success');
+          }
+        });
+
+        if (hasNewIncoming) {
+          saveAppointmentsToStorage();
+          updateAdminDashboard();
+        }
       }
     }
 
     function initCloudSync() {
       pullAppointmentsFromCloud();
       if (cloudPollTimer) clearInterval(cloudPollTimer);
-      // Polling a cada 2 segundos para recepção quase instantânea
+      // Polling a cada 2 segundos para recepção imediata
       cloudPollTimer = setInterval(pullAppointmentsFromCloud, 2000);
     }
 
@@ -1620,17 +1659,40 @@
       const container = document.getElementById('timeSlotsContainer');
       if (!container) return;
 
+      const now = new Date();
+      // Ano-Mês-Dia de Hoje em formato local
+      const todayYear = now.getFullYear();
+      const todayMonth = String(now.getMonth() + 1).padStart(2, '0');
+      const todayDay = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${todayYear}-${todayMonth}-${todayDay}`;
+
+      const isToday = (dateStr === todayStr);
+      const currentHours = now.getHours();
+      const currentMinutes = now.getMinutes();
+
       const occupiedTimes = allAppointments
         .filter(a => a.date === dateStr && a.status !== 'Cancelado')
         .map(a => a.time);
 
       container.innerHTML = DEFAULT_TIME_SLOTS.map(time => {
+        const [slotHour, slotMin] = time.split(':').map(Number);
+        
+        // Se for hoje, verifica se o horário já passou (com tolerância de 5 minutos)
+        const isPastSlot = isToday && (slotHour < currentHours || (slotHour === currentHours && slotMin <= (currentMinutes + 5)));
         const isOccupied = occupiedTimes.includes(time);
         const isSelected = currentBooking.time === time;
 
+        if (isPastSlot) {
+          return `
+            <div title="Horário já ultrapassado" class="py-2 px-1 rounded-lg bg-zinc-900/40 border border-zinc-800/60 text-zinc-600 text-xs text-center cursor-not-allowed select-none opacity-40">
+              <span class="line-through">${time}</span>
+            </div>
+          `;
+        }
+
         if (isOccupied) {
           return `
-            <div class="py-2 px-1 rounded-lg bg-zinc-900/60 border border-zinc-800 text-zinc-600 text-xs text-center cursor-not-allowed line-through">
+            <div title="Horário já reservado por outro cliente" class="py-2 px-1 rounded-lg bg-zinc-900/60 border border-zinc-800 text-zinc-600 text-xs text-center cursor-not-allowed line-through">
               ${time}
             </div>
           `;
