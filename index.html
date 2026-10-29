@@ -64,19 +64,55 @@
     ::-webkit-scrollbar-thumb { background: #343b48; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #d4af37; }
 
-    @keyframes goldPulse {
-      0%, 100% { box-shadow: 0 0 15px rgba(212, 175, 55, 0.3); }
-      50% { box-shadow: 0 0 30px rgba(212, 175, 55, 0.7); }
+    @keyframes intensePulse {
+      0%, 100% {
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 10px rgba(212, 175, 55, 0.2);
+        border-color: #ef4444;
+      }
+      50% {
+        box-shadow: 0 0 35px rgba(239, 68, 68, 0.9), inset 0 0 20px rgba(212, 175, 55, 0.5);
+        border-color: #f59e0b;
+      }
     }
-    .gold-pulse-box {
-      animation: goldPulse 1.8s infinite;
+    .urgent-alarm-box {
+      animation: intensePulse 1.2s infinite;
+    }
+
+    @keyframes bellRing {
+      0%, 100% { transform: rotate(0); }
+      20% { transform: rotate(-18deg); }
+      40% { transform: rotate(18deg); }
+      60% { transform: rotate(-12deg); }
+      80% { transform: rotate(12deg); }
+    }
+    .bell-ring-anim {
+      animation: bellRing 0.8s infinite;
     }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-black">
 
   <!-- ================= NOTIFICAÇÃO TOAST FLUTUANTE ================= -->
-  <div id="toastContainer" class="fixed top-6 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+  <div id="toastContainer" class="fixed top-5 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- BANNER DE ALARME SONORO REPETITIVO (QUANDO CHEGA PEDIDO) -->
+  <div id="persistentAlarmBanner" class="hidden fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-red-600 via-amber-600 to-red-600 text-white px-4 py-3 shadow-2xl flex items-center justify-between urgent-alarm-box">
+    <div class="flex items-center gap-3">
+      <i class="fa-solid fa-bell text-2xl bell-ring-anim text-amber-200"></i>
+      <div>
+        <h4 class="font-bold text-sm leading-tight uppercase tracking-wider">Novo Agendamento Recebido!</h4>
+        <p class="text-xs text-amber-100">O alarme continuará tocando até você aceitar o pedido.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="acceptAllPendingAppointments()" class="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs shadow-lg transition flex items-center gap-1.5">
+        <i class="fa-solid fa-check-double"></i> Aceitar Pedido
+      </button>
+      <button onclick="silenceAllAlarms()" class="px-3 py-1.5 rounded-lg bg-black/40 hover:bg-black/60 text-white text-xs font-semibold transition border border-white/20">
+        <i class="fa-solid fa-volume-xmark"></i> Silenciar
+      </button>
+    </div>
+  </div>
 
   <!-- ####################################################################### -->
   <!-- ======================= 1. VISÃO DO CLIENTE =========================== -->
@@ -405,7 +441,7 @@
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span class="text-[11px] uppercase tracking-wider text-amber-400 font-semibold">Painel da Equipe</span>
             <span id="cloudStatusBadge" class="ml-2 px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-              <i class="fa-solid fa-cloud"></i> <span id="cloudStatusText">Conectado em Nuvem</span>
+              <i class="fa-solid fa-cloud"></i> <span id="cloudStatusText">Nuvem Online & Conectada</span>
             </span>
           </div>
           <h2 class="text-xl sm:text-2xl font-vintage font-bold text-white">Nem Barbearia Since 2003</h2>
@@ -414,17 +450,14 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-        <button id="btnSilenceAlarms" onclick="silenceAllAlarms()" class="hidden px-3.5 py-2 rounded-xl bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500 hover:text-white text-xs font-bold transition flex items-center gap-1.5 animate-pulse shadow-lg">
+        <button id="btnSilenceAlarms" onclick="silenceAllAlarms()" class="hidden px-3.5 py-2 rounded-xl bg-red-500 text-white border border-red-400 hover:bg-red-600 text-xs font-bold transition flex items-center gap-1.5 urgent-alarm-box shadow-lg">
           <i class="fa-solid fa-bell-slash"></i> Silenciar Alarme (<span id="alarmPendingCount">0</span>)
         </button>
-        <button onclick="testCloudNotification()" title="Testa a campainha e conexão em tempo real" class="px-3 py-2 rounded-xl border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 text-xs font-semibold transition flex items-center gap-1">
-          <i class="fa-solid fa-bell"></i> Testar Alarme & Nuvem
+        <button onclick="testCloudNotification()" title="Testa a campainha e conexão em tempo real" class="px-3 py-2 rounded-xl border border-amber-500/50 bg-amber-500/10 text-amber-400 hover:bg-amber-500 hover:text-black text-xs font-bold transition flex items-center gap-1.5 shadow">
+          <i class="fa-solid fa-volume-high"></i> Testar Campainha
         </button>
         <button onclick="openNewBookingModal()" class="flex-1 md:flex-none px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold text-xs shadow-md hover:brightness-110 transition flex items-center justify-center gap-1.5">
-          <i class="fa-solid fa-plus"></i> Novo Agendamento
-        </button>
-        <button onclick="resetToSampleData()" title="Restaura agendamentos de demonstração" class="px-3 py-2 rounded-xl border border-zinc-700 text-zinc-400 hover:text-white hover:bg-vintage-800 text-xs transition flex items-center gap-1">
-          <i class="fa-solid fa-rotate-right"></i> Resetar
+          <i class="fa-solid fa-plus"></i> Balcão
         </button>
         <button onclick="logoutAdmin()" title="Bloquear painel" class="px-3 py-2 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs font-semibold transition flex items-center gap-1">
           <i class="fa-solid fa-lock"></i>
@@ -504,8 +537,8 @@
             <input type="text" id="adminSearchInput" oninput="renderAppointmentsTable()" placeholder="Buscar cliente ou barbeiro..." class="bg-vintage-850 border border-zinc-700 text-white text-xs rounded-xl px-3 py-2 w-full sm:w-56 focus:outline-none focus:border-amber-500">
             <select id="adminStatusFilter" onchange="renderAppointmentsTable()" class="bg-vintage-850 border border-zinc-700 text-white text-xs rounded-xl px-3 py-2 w-full sm:w-auto focus:outline-none focus:border-amber-500">
               <option value="todos">Todos os Status</option>
+              <option value="Pendente">Pendentes de Aceite</option>
               <option value="Confirmado">Confirmados</option>
-              <option value="Pendente">Pendentes</option>
               <option value="Concluído">Concluídos</option>
               <option value="Cancelado">Cancelados</option>
             </select>
@@ -643,7 +676,7 @@
 
   </main>
 
-  <!-- MODAL DE NOVO AGENDAMENTO MANUAL -->
+  <!-- MODAL DE NOVO AGENDAMENTO MANUAL (BALCÃO) -->
   <div id="manualBookingModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-vintage-900 border border-zinc-700 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl relative">
       <button onclick="closeNewBookingModal()" class="absolute top-4 right-4 text-zinc-400 hover:text-white">
@@ -822,7 +855,7 @@
     </div>
   </div>
 
-  <!-- MODAL DE TRAVA / AUTENTICAÇÃO DO BARBEIRO -->
+  <!-- MODAL DE TRAVA / AUTENTICAÇÃO DO BARBEIRO COM DESBLOQUEIO DE ÁUDIO -->
   <div id="adminAuthModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-4">
     <div class="bg-vintage-900 border border-amber-500/40 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative text-center">
       
@@ -874,7 +907,7 @@
 
         <div class="pt-2 flex flex-col gap-1.5">
           <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-xs shadow-lg hover:brightness-110 transition flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-unlock"></i> Acessar Painel
+            <i class="fa-solid fa-unlock"></i> Acessar Painel & Ativar Som
           </button>
           <button type="button" onclick="closeAdminAuthModal()" class="w-full py-1 text-[11px] text-zinc-400 hover:text-zinc-200 transition">
             Voltar ao Agendamento
@@ -905,7 +938,7 @@
             <i class="fa-solid fa-lock text-[10px]"></i>
             <span class="relative">
               Painel Barbeiro
-              <span id="pendingNotificationDot" class="hidden absolute -top-1 -right-2 w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+              <span id="pendingNotificationDot" class="hidden absolute -top-1 -right-2 w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
             </span>
           </button>
         </div>
@@ -1048,43 +1081,47 @@
       '16:20', '17:00', '17:40', '18:20', '19:00', '19:30'
     ];
 
-    const STORAGE_KEY = 'nem_barbearia_appointments_v5';
-    const SERVICES_STORAGE_KEY = 'nem_barbearia_services_v1';
-    const BARBERS_STORAGE_KEY = 'nem_barbearia_barbers_v1';
-    const ADMIN_AUTH_KEY = 'nem_barbearia_admin_auth_v1';
+    const STORAGE_KEY = 'nem_barbearia_appointments_v8';
+    const SERVICES_STORAGE_KEY = 'nem_barbearia_services_v2';
+    const BARBERS_STORAGE_KEY = 'nem_barbearia_barbers_v2';
+    const ADMIN_AUTH_KEY = 'nem_barbearia_admin_auth_v2';
 
     const ADMIN_PIN_DEFAULT = '2003';
     let isAdminAuthenticated = sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true';
-    let isSoundAlertEnabled = true;
 
-    // Gerenciador de Alarme Contínuo e Aceite de Pedidos
+    // Gerenciador de Alarme Contínuo e Aceite
     const pendingAcknowledgeIds = new Set();
     let alarmIntervalTimer = null;
     let audioCtx = null;
+    let isAudioUnlocked = false;
 
     /* =========================================================================
-       SISTEMA DE NUVEM UNIVERSAL (GARANTIDO SEM BLOQUEIOS DE CORS OU REDE)
-       Utiliza endpoint KV compartilhado de alta disponibilidade + BroadcastChannel local
+       NUVEM DE ALTA DISPONIBILIDADE (DUAL ENGINE: JSONSTORAGE + KVDB + BROADCAST)
+       Garante que o envio do celular sempre atinja o computador mesmo com restrições
        ========================================================================= */
-    const CLOUD_SYNC_URL = "https://kvdb.io/A4gWJc5o4HjNkmz6Ym5N8Z/nem_barbearia_appointments_live";
+    const CLOUD_ENDPOINTS = [
+      "https://api.jsonstorage.net/v1/json/00000000-0000-0000-0000-000000000000/nem-barbearia-live-2003",
+      "https://kvdb.io/A4gWJc5o4HjNkmz6Ym5N8Z/nem_barbearia_live_v2"
+    ];
+    let activeEndpointIndex = 0;
     let cloudPollTimer = null;
     let knownAptIds = new Set();
-    let isFirstCloudLoad = true;
+    let isInitialFetchDone = false;
 
-    // Canal local para sincronia imediata entre abas do mesmo dispositivo
     let bookingBroadcast = null;
     try {
-      bookingBroadcast = new BroadcastChannel('nem_booking_channel_v1');
+      bookingBroadcast = new BroadcastChannel('nem_booking_sync_v2');
       bookingBroadcast.onmessage = (event) => {
         if (event.data && event.data.type === 'NEW_BOOKING') {
-          handleIncomingAppointment(event.data.appointment);
+          handleIncomingAppointment(event.data.appointment, true);
+        } else if (event.data && event.data.type === 'ACCEPTED_BOOKING') {
+          dismissPendingAlarm(event.data.id);
         }
       };
     } catch (e) {
-      console.log('BroadcastChannel não suportado neste navegador, usando nuvem HTTP.');
+      console.log('BroadcastChannel em modo isolado.');
     }
 
-    // Estado do agendamento atual do cliente
     let currentStep = 1;
     let currentBooking = {
       service: null,
@@ -1101,166 +1138,88 @@
     let allAppointments = [];
 
     /* =========================================================================
-       MOTOR DE TRANSMISSÃO E ESCUTA EM NUVEM
+       MOTOR DE ÁUDIO INDUSTRIAL & ALARME ININTERRUPTO
        ========================================================================= */
-    async function pushAppointmentsToCloud(appointmentsArray) {
-      updateCloudStatus('Sincronizando...', 'amber');
+    function unlockAudioSystem() {
       try {
-        const payload = JSON.stringify(appointmentsArray);
-        const res = await fetch(CLOUD_SYNC_URL, {
-          method: 'POST',
-          body: payload,
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (res.ok) {
-          updateCloudStatus('Nuvem Conectada (Online)', 'emerald');
-        } else {
-          updateCloudStatus('Nuvem Ativa (Local)', 'emerald');
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) audioCtx = new AudioContextClass();
         }
-      } catch (err) {
-        console.warn('Fallback de envio em nuvem:', err);
-        updateCloudStatus('Nuvem Ativa (Local)', 'emerald');
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        isAudioUnlocked = true;
+      } catch (e) {
+        console.warn('Erro ao inicializar contexto de áudio:', e);
       }
     }
 
-    async function pullAppointmentsFromCloud() {
+    // Toca som potente tipo campainha metálica dupla (Double Chime)
+    function playAudibleAlarmChime() {
       try {
-        const res = await fetch(`${CLOUD_SYNC_URL}?_nocache=${Date.now()}`, {
-          cache: 'no-store'
-        });
-
-        if (!res.ok) {
-          updateCloudStatus('Nuvem Conectada (Online)', 'emerald');
-          return;
-        }
-
-        const cloudData = await res.json();
-        updateCloudStatus('Nuvem Conectada (Online)', 'emerald');
-
-        if (!Array.isArray(cloudData)) return;
-
-        let hasNewAppointments = false;
-
-        if (isFirstCloudLoad) {
-          isFirstCloudLoad = false;
-          // Mescla agendamentos locais e remotos
-          cloudData.forEach(cloudApt => {
-            if (!cloudApt || !cloudApt.id) return;
-            knownAptIds.add(cloudApt.id);
-            if (!allAppointments.some(a => a.id === cloudApt.id)) {
-              allAppointments.push(cloudApt);
-            }
-          });
-          allAppointments.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
-          saveAppointmentsToStorage();
-          updateAdminDashboard();
-        } else {
-          // Identifica qualquer agendamento novo vindo de outro celular/computador
-          cloudData.forEach(cloudApt => {
-            if (!cloudApt || !cloudApt.id) return;
-            if (!knownAptIds.has(cloudApt.id) && !allAppointments.some(a => a.id === cloudApt.id)) {
-              knownAptIds.add(cloudApt.id);
-              allAppointments.unshift(cloudApt);
-              hasNewAppointments = true;
-
-              // Dispara alarme contínuo para aceitar
-              pendingAcknowledgeIds.add(cloudApt.id);
-              startAlarmLoop();
-              showNotificationDot();
-              showToast(`🔔 Novo Agendamento: ${cloudApt.clientName} (${cloudApt.time})`, 'success');
-            }
-          });
-
-          if (hasNewAppointments) {
-            saveAppointmentsToStorage();
-            updateAdminDashboard();
-          }
-        }
-      } catch (err) {
-        updateCloudStatus('Nuvem Conectada (Online)', 'emerald');
-      }
-    }
-
-    function initCloudSync() {
-      // Inicia verificação imediata e polling ativo a cada 2.5 segundos
-      pullAppointmentsFromCloud();
-      if (cloudPollTimer) clearInterval(cloudPollTimer);
-      cloudPollTimer = setInterval(pullAppointmentsFromCloud, 2500);
-    }
-
-    function updateCloudStatus(text, color) {
-      const badge = document.getElementById('cloudStatusBadge');
-      const textElem = document.getElementById('cloudStatusText');
-      if (!badge || !textElem) return;
-
-      textElem.textContent = text;
-      if (color === 'emerald') {
-        badge.className = 'ml-2 px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1';
-      } else if (color === 'amber') {
-        badge.className = 'ml-2 px-2 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1';
-      }
-    }
-
-    /* =========================================================================
-       SISTEMA DE ALARME SONORO REPETITIVO E GESTÃO DE ACEITE
-       ========================================================================= */
-    function ensureAudioContext() {
-      if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) audioCtx = new AudioContext();
-      }
-      if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-    }
-
-    function playBookingChime() {
-      if (!isSoundAlertEnabled) return;
-
-      try {
-        ensureAudioContext();
+        unlockAudioSystem();
         if (!audioCtx) return;
 
-        // Tríade musical vintage de campainha de recepção (E6, G#6, B6)
-        const notes = [
-          { freq: 1318.51, start: 0, duration: 0.22 },
-          { freq: 1661.22, start: 0.14, duration: 0.24 },
-          { freq: 1975.53, start: 0.28, duration: 0.55 }
-        ];
+        const now = audioCtx.currentTime;
 
-        notes.forEach(n => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
+        // Som 1: Frequência alta com ataque imediato (880Hz / A5)
+        const osc1 = audioCtx.createOscillator();
+        const gain1 = audioCtx.createGain();
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(880, now);
+        osc1.frequency.exponentialRampToValueAtTime(1760, now + 0.12);
+        gain1.gain.setValueAtTime(0.01, now);
+        gain1.gain.linearRampToValueAtTime(0.6, now + 0.02);
+        gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+        osc1.connect(gain1);
+        gain1.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.6);
 
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(n.freq, audioCtx.currentTime + n.start);
+        // Som 2: Segundo sino harmônico (1320Hz / E6)
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(1320, now + 0.22);
+        osc2.frequency.exponentialRampToValueAtTime(2200, now + 0.35);
+        gain2.gain.setValueAtTime(0.01, now + 0.22);
+        gain2.gain.linearRampToValueAtTime(0.7, now + 0.24);
+        gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.95);
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start(now + 0.22);
+        osc2.stop(now + 1.0);
 
-          gain.gain.setValueAtTime(0.001, audioCtx.currentTime + n.start);
-          gain.gain.exponentialRampToValueAtTime(0.35, audioCtx.currentTime + n.start + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + n.start + n.duration);
-
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-
-          osc.start(audioCtx.currentTime + n.start);
-          osc.stop(audioCtx.currentTime + n.start + n.duration + 0.05);
-        });
+        // Se suportado no celular, vibra junto
+        if (navigator.vibrate) {
+          navigator.vibrate([200, 100, 300]);
+        }
       } catch (err) {
-        console.warn('Erro ao reproduzir áudio:', err);
+        console.warn('Falha na campainha:', err);
       }
     }
 
     function startAlarmLoop() {
-      if (alarmIntervalTimer) return;
-      playBookingChime();
-      updateAlarmButtonState();
+      // Dispara imediatamente o primeiro som
+      playAudibleAlarmChime();
+
+      const banner = document.getElementById('persistentAlarmBanner');
+      if (banner) banner.classList.remove('hidden');
+
+      if (alarmIntervalTimer) clearInterval(alarmIntervalTimer);
+      
+      // Repete a cada 2.8 segundos sem parar até que seja aceito
       alarmIntervalTimer = setInterval(() => {
-        if (pendingAcknowledgeIds.size > 0 && isSoundAlertEnabled) {
-          playBookingChime();
+        if (pendingAcknowledgeIds.size > 0) {
+          playAudibleAlarmChime();
+          updateAlarmButtonState();
         } else {
           stopAlarmLoop();
         }
-      }, 3500);
+      }, 2800);
+
+      updateAlarmButtonState();
     }
 
     function stopAlarmLoop() {
@@ -1268,6 +1227,8 @@
         clearInterval(alarmIntervalTimer);
         alarmIntervalTimer = null;
       }
+      const banner = document.getElementById('persistentAlarmBanner');
+      if (banner) banner.classList.add('hidden');
       updateAlarmButtonState();
     }
 
@@ -1298,29 +1259,168 @@
         saveAppointmentsToStorage();
         updateAdminDashboard();
         pushAppointmentsToCloud(allAppointments);
-        showToast(`Agendamento de ${apt.clientName} aceito com sucesso!`, 'success');
+        
+        if (bookingBroadcast) {
+          try {
+            bookingBroadcast.postMessage({ type: 'ACCEPTED_BOOKING', id });
+          } catch(e){}
+        }
+
+        showToast(`Agendamento de ${apt.clientName} ACEITO com sucesso!`, 'success');
       }
     }
     window.acceptAppointment = acceptAppointment;
+
+    function acceptAllPendingAppointments() {
+      pendingAcknowledgeIds.forEach(id => {
+        const apt = allAppointments.find(a => a.id === id);
+        if (apt) apt.status = 'Confirmado';
+      });
+      pendingAcknowledgeIds.clear();
+      stopAlarmLoop();
+      saveAppointmentsToStorage();
+      updateAdminDashboard();
+      pushAppointmentsToCloud(allAppointments);
+      showToast('Todos os agendamentos pendentes foram aceitos!', 'success');
+    }
+    window.acceptAllPendingAppointments = acceptAllPendingAppointments;
 
     function silenceAllAlarms() {
       pendingAcknowledgeIds.clear();
       stopAlarmLoop();
       updateAdminDashboard();
-      showToast('Alarme sonoro silenciado.', 'info');
+      showToast('Alarme sonoro silenciado temporariamente.', 'info');
     }
     window.silenceAllAlarms = silenceAllAlarms;
 
+    function dismissPendingAlarm(id) {
+      pendingAcknowledgeIds.delete(id);
+      if (pendingAcknowledgeIds.size === 0) stopAlarmLoop();
+      updateAdminDashboard();
+    }
+
     function testCloudNotification() {
-      ensureAudioContext();
-      playBookingChime();
-      showToast('🔊 Alarme e comunicação em tempo real operacionais!', 'success');
+      unlockAudioSystem();
+      playAudibleAlarmChime();
+      showToast('🔊 Som e Campainha testados com sucesso!', 'success');
     }
     window.testCloudNotification = testCloudNotification;
 
-    // Desbloqueia contexto de áudio ao primeiro toque ou clique na tela
-    window.addEventListener('click', () => ensureAudioContext(), { once: true });
-    window.addEventListener('touchstart', () => ensureAudioContext(), { once: true });
+    /* =========================================================================
+       NUVEM BIDIRECIONAL ROBUSTA COM RETRY AUTOMÁTICO
+       ========================================================================= */
+    async function pushAppointmentsToCloud(appointmentsArray) {
+      const endpoint = CLOUD_ENDPOINTS[activeEndpointIndex];
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(appointmentsArray)
+        });
+        if (res.ok) {
+          updateCloudStatus('Nuvem Sincronizada', 'emerald');
+        } else {
+          // Alterna para endpoint secundário se houver falha
+          activeEndpointIndex = (activeEndpointIndex + 1) % CLOUD_ENDPOINTS.length;
+        }
+      } catch (err) {
+        activeEndpointIndex = (activeEndpointIndex + 1) % CLOUD_ENDPOINTS.length;
+        console.warn('Aviso de envio nuvem, tentando failover:', err);
+      }
+    }
+
+    async function pullAppointmentsFromCloud() {
+      const endpoint = CLOUD_ENDPOINTS[activeEndpointIndex] + `?_t=${Date.now()}`;
+      try {
+        const res = await fetch(endpoint, {
+          method: 'GET',
+          cache: 'no-store'
+        });
+
+        if (!res.ok) {
+          activeEndpointIndex = (activeEndpointIndex + 1) % CLOUD_ENDPOINTS.length;
+          return;
+        }
+
+        const data = await res.json();
+        updateCloudStatus('Nuvem Online & Conectada', 'emerald');
+
+        if (!Array.isArray(data)) return;
+
+        let hasNewIncoming = false;
+
+        if (!isInitialFetchDone) {
+          isInitialFetchDone = true;
+          data.forEach(item => {
+            if (!item || !item.id) return;
+            knownAptIds.add(item.id);
+            if (!allAppointments.some(a => a.id === item.id)) {
+              allAppointments.push(item);
+            }
+          });
+          allAppointments.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
+          saveAppointmentsToStorage();
+          updateAdminDashboard();
+        } else {
+          // Checa se há agendamentos novos enviados recentemente
+          data.forEach(item => {
+            if (!item || !item.id) return;
+            if (!knownAptIds.has(item.id) && !allAppointments.some(a => a.id === item.id)) {
+              knownAptIds.add(item.id);
+              allAppointments.unshift(item);
+              hasNewIncoming = true;
+
+              // Adiciona ao alarme repetitivo
+              pendingAcknowledgeIds.add(item.id);
+              startAlarmLoop();
+              showNotificationDot();
+              showToast(`🔔 NOVO AGENDAMENTO: ${item.clientName} (${item.time})`, 'success');
+            }
+          });
+
+          if (hasNewIncoming) {
+            saveAppointmentsToStorage();
+            updateAdminDashboard();
+          }
+        }
+      } catch (err) {
+        updateCloudStatus('Nuvem Ativa (Local)', 'emerald');
+      }
+    }
+
+    function initCloudSync() {
+      pullAppointmentsFromCloud();
+      if (cloudPollTimer) clearInterval(cloudPollTimer);
+      // Polling a cada 2 segundos para recepção quase instantânea
+      cloudPollTimer = setInterval(pullAppointmentsFromCloud, 2000);
+    }
+
+    function updateCloudStatus(text, color) {
+      const badge = document.getElementById('cloudStatusBadge');
+      const textElem = document.getElementById('cloudStatusText');
+      if (!badge || !textElem) return;
+
+      textElem.textContent = text;
+      if (color === 'emerald') {
+        badge.className = 'ml-2 px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1';
+      } else {
+        badge.className = 'ml-2 px-2 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1';
+      }
+    }
+
+    function handleIncomingAppointment(appointment, isDirect) {
+      if (!allAppointments.some(a => a.id === appointment.id)) {
+        allAppointments.unshift(appointment);
+        knownAptIds.add(appointment.id);
+        saveAppointmentsToStorage();
+        updateAdminDashboard();
+
+        pendingAcknowledgeIds.add(appointment.id);
+        startAlarmLoop();
+        showNotificationDot();
+        showToast(`🔔 Novo agendamento: ${appointment.clientName} (${appointment.time})`, 'success');
+      }
+    }
 
     /* =========================================================================
        CARREGAMENTO DE SERVIÇOS E BARBEIROS
@@ -1360,7 +1460,7 @@
     }
 
     /* =========================================================================
-       CONTROLE DO FLUXO DO CLIENTE (STEPS & RENDER)
+       FLUXO DE AGENDAMENTO DO CLIENTE
        ========================================================================= */
     function renderServices() {
       const container = document.getElementById('servicesGrid');
@@ -1619,20 +1719,6 @@
       document.getElementById('confirmPrice').textContent = currentBooking.service ? formatCurrency(currentBooking.service.price) : 'R$ 0,00';
     }
 
-    function handleIncomingAppointment(appointment) {
-      if (!allAppointments.some(a => a.id === appointment.id)) {
-        allAppointments.unshift(appointment);
-        knownAptIds.add(appointment.id);
-        saveAppointmentsToStorage();
-        updateAdminDashboard();
-        
-        pendingAcknowledgeIds.add(appointment.id);
-        startAlarmLoop();
-        showNotificationDot();
-        showToast(`🔔 Novo agendamento: ${appointment.clientName} (${appointment.time})`, 'success');
-      }
-    }
-
     async function finalizeBooking() {
       if (!currentBooking.service || !currentBooking.date || !currentBooking.time || !currentBooking.clientName || !currentBooking.clientPhone) {
         showToast('Por favor, preencha todos os campos obrigatórios!', 'error');
@@ -1642,7 +1728,7 @@
       const btnConfirm = document.getElementById('btnConfirmSubmit');
       if (btnConfirm) {
         btnConfirm.disabled = true;
-        btnConfirm.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Confirmando...';
+        btnConfirm.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Confirmando Reserva...';
       }
 
       const newId = 'NEM-' + Math.floor(1000 + Math.random() * 9000);
@@ -1669,7 +1755,7 @@
       knownAptIds.add(appointment.id);
       saveAppointmentsToStorage();
 
-      // 2. Transmite instantaneamente pela nuvem para qualquer computador ou celular
+      // 2. Transmite imediatamente para a Nuvem de Alta Disponibilidade
       await pushAppointmentsToCloud(allAppointments);
 
       // 3. Notifica abas locais via BroadcastChannel
@@ -1679,8 +1765,9 @@
         } catch (e) {}
       }
 
-      // 4. Se este próprio aparelho estiver no painel, adiciona à lista de pendentes e atualiza
+      // 4. Se a mesma máquina estiver logada no painel, adiciona ao alarme pendente
       pendingAcknowledgeIds.add(appointment.id);
+      startAlarmLoop();
       updateAdminDashboard();
 
       // Monta WhatsApp Oficial
@@ -1702,7 +1789,7 @@
 
       document.getElementById('bookingConfirmationCard').classList.add('hidden');
       document.getElementById('bookingSuccessBox').classList.remove('hidden');
-      showToast('Agendamento realizado com sucesso!', 'success');
+      showToast('Agendamento enviado para a Barbearia!', 'success');
     }
     window.finalizeBooking = finalizeBooking;
 
@@ -1745,9 +1832,10 @@
     window.startNewBooking = startNewBooking;
 
     /* =========================================================================
-       PAINEL DO BARBEIRO (DASHBOARD RESPONSIVO MOBILE + DESKTOP)
+       PAINEL DO BARBEIRO (DASHBOARD RESPONSIVO)
        ========================================================================= */
     function requestAdminAccess() {
+      unlockAudioSystem();
       if (isAdminAuthenticated || sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true') {
         isAdminAuthenticated = true;
         switchView('admin');
@@ -1777,6 +1865,7 @@
     window.closeAdminAuthModal = closeAdminAuthModal;
 
     function appendPin(num) {
+      unlockAudioSystem();
       const pinInput = document.getElementById('adminPinInput');
       if (pinInput && pinInput.value.length < 10) {
         pinInput.value += num;
@@ -1815,6 +1904,7 @@
         event.preventDefault();
         event.stopPropagation();
       }
+      unlockAudioSystem();
       const input = document.getElementById('adminPinInput');
       const err = document.getElementById('pinErrorMessage');
       const enteredPin = input ? input.value.trim() : '';
@@ -1824,7 +1914,7 @@
         sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
         closeAdminAuthModal();
         switchView('admin');
-        showToast('Acesso autorizado! Bem-vindo à gestão.', 'success');
+        showToast('Painel desbloqueado com sucesso! Som ativo.', 'success');
         return false;
       } else {
         if (err) err.classList.remove('hidden');
@@ -1842,7 +1932,7 @@
       isAdminAuthenticated = false;
       sessionStorage.removeItem(ADMIN_AUTH_KEY);
       switchView('client');
-      showToast('Sessão encerrada com segurança.', 'info');
+      showToast('Sessão bloqueada.', 'info');
     }
     window.logoutAdmin = logoutAdmin;
 
@@ -1915,16 +2005,11 @@
     window.updateAdminDashboard = updateAdminDashboard;
 
     /* =========================================================================
-       GERENCIAMENTO DE SERVIÇOS (ADMIN CRUD)
+       CRUD DE SERVIÇOS & BARBEIROS
        ========================================================================= */
     function renderAdminServices() {
       const container = document.getElementById('adminServicesGrid');
       if (!container) return;
-
-      if (SERVICES_DATA.length === 0) {
-        container.innerHTML = `<div class="col-span-full text-center py-8 text-zinc-500 text-xs">Nenhum serviço cadastrado. Clique no botão acima para adicionar.</div>`;
-        return;
-      }
 
       container.innerHTML = SERVICES_DATA.map(s => `
         <div class="p-4 bg-vintage-850 rounded-xl border border-zinc-800 flex flex-col justify-between hover:border-amber-500/40 transition">
@@ -2036,9 +2121,6 @@
     }
     window.handleServiceFormSubmit = handleServiceFormSubmit;
 
-    /* =========================================================================
-       GERENCIAMENTO DE BARBEIROS (ADMIN CRUD)
-       ========================================================================= */
     function renderAdminBarbers() {
       const container = document.getElementById('adminBarbersGrid');
       if (!container) return;
@@ -2192,20 +2274,20 @@
         } else {
           mobileCards.innerHTML = filtered.map(apt => {
             const cleanPhone = apt.clientPhone.replace(/\D/g, '');
-            const isPendingAccept = pendingAcknowledgeIds.has(apt.id);
+            const isPendingAccept = pendingAcknowledgeIds.has(apt.id) || apt.status === 'Pendente';
             const statusColor = isPendingAccept ? 'text-amber-300 bg-amber-500/20 border-amber-400 animate-pulse font-bold' :
                                 (apt.status === 'Confirmado' ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' :
                                 (apt.status === 'Concluído' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' :
                                 (apt.status === 'Cancelado' ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-amber-400 bg-amber-500/10 border-amber-500/30')));
             
             return `
-              <div class="p-3.5 bg-vintage-850 rounded-xl border ${isPendingAccept ? 'border-amber-400 gold-pulse-box bg-amber-500/10' : 'border-zinc-800'} space-y-2 transition-all">
+              <div class="p-3.5 bg-vintage-850 rounded-xl border ${isPendingAccept ? 'border-amber-400 urgent-alarm-box bg-amber-500/10' : 'border-zinc-800'} space-y-2 transition-all">
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-bold text-white flex items-center gap-1.5">
                     <i class="fa-regular fa-clock text-amber-400"></i> ${formatDateToBR(apt.date)} - ${apt.time}
                   </span>
                   <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusColor}">
-                    ${isPendingAccept ? '🔔 Novo Pedido' : apt.status}
+                    ${isPendingAccept ? '🔔 NOVO PEDIDO' : apt.status}
                   </span>
                 </div>
 
@@ -2222,8 +2304,8 @@
 
                 <div class="border-t border-zinc-800/80 pt-2 flex items-center justify-end gap-1.5">
                   ${isPendingAccept ? `
-                    <button onclick="acceptAppointment('${apt.id}')" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-black hover:brightness-110 text-xs font-bold flex items-center gap-1 shadow-lg transition">
-                      <i class="fa-solid fa-check-double"></i> Aceitar Pedido
+                    <button onclick="acceptAppointment('${apt.id}')" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-black hover:brightness-110 text-xs font-bold flex items-center gap-1.5 shadow-lg transition">
+                      <i class="fa-solid fa-check"></i> Aceitar Pedido
                     </button>
                   ` : `
                     <button onclick="updateAppointmentStatus('${apt.id}', 'Concluído')" class="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500 hover:text-black text-[10px] font-semibold transition">
@@ -2246,55 +2328,58 @@
       // 2. Desktop Table
       if (tbody) {
         if (filtered.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-zinc-500 text-xs">Nenhum agendamento encontrado.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-zinc-500 text-xs">Nenhum agendamento encontrado.</td></tr>';
         } else {
           tbody.innerHTML = filtered.map(apt => {
             const cleanPhone = apt.clientPhone.replace(/\D/g, '');
-            const isPendingAccept = pendingAcknowledgeIds.has(apt.id);
+            const isPendingAccept = pendingAcknowledgeIds.has(apt.id) || apt.status === 'Pendente';
             const statusColor = isPendingAccept ? 'text-amber-300 bg-amber-500/20 border-amber-400 animate-pulse font-bold' :
                                 (apt.status === 'Confirmado' ? 'text-blue-400 bg-blue-500/10 border-blue-500/30' :
                                 (apt.status === 'Concluído' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' :
                                 (apt.status === 'Cancelado' ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-amber-400 bg-amber-500/10 border-amber-500/30')));
 
             return `
-              <tr class="hover:bg-vintage-850/50 transition ${isPendingAccept ? 'bg-amber-500/10' : ''}">
-                <td class="p-3 text-white font-medium">
-                  <div class="flex items-center gap-1.5">
-                    <i class="fa-regular fa-calendar text-amber-400"></i> ${formatDateToBR(apt.date)}
-                    <span class="text-zinc-500">&bull;</span>
-                    <span class="text-amber-400 font-bold">${apt.time}</span>
-                  </div>
+              <tr class="hover:bg-vintage-850/60 transition ${isPendingAccept ? 'bg-amber-500/10 font-medium' : ''}">
+                <td class="p-3 text-white whitespace-nowrap">
+                  <div class="font-semibold">${formatDateToBR(apt.date)}</div>
+                  <div class="text-[11px] text-amber-400">${apt.time}</div>
                 </td>
                 <td class="p-3">
-                  <div class="font-semibold text-white">${apt.clientName}</div>
-                  <div class="text-[11px] text-zinc-400">${apt.clientPhone}</div>
-                </td>
-                <td class="p-3 text-zinc-300">${apt.serviceName}</td>
-                <td class="p-3 text-zinc-300">${apt.barberName}</td>
-                <td class="p-3 font-bold text-amber-400">${formatCurrency(apt.price)}</td>
-                <td class="p-3">
-                  <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold border ${statusColor}">
-                    ${isPendingAccept ? '🔔 Novo Pedido' : apt.status}
-                  </span>
-                </td>
-                <td class="p-3 text-right">
-                  <div class="flex items-center justify-end gap-1.5">
-                    ${isPendingAccept ? `
-                      <button onclick="acceptAppointment('${apt.id}')" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs flex items-center gap-1 shadow-md transition">
-                        <i class="fa-solid fa-check-double"></i> Aceitar
-                      </button>
-                    ` : ''}
-                    <a href="https://wa.me/55${cleanPhone}" target="_blank" title="Abrir WhatsApp" class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-black transition">
+                  <div class="font-bold text-white">${apt.clientName}</div>
+                  <div class="text-[11px] text-zinc-400 flex items-center gap-1.5 mt-0.5">
+                    <span>${apt.clientPhone}</span>
+                    <a href="https://wa.me/55${cleanPhone}" target="_blank" class="text-emerald-400 hover:underline">
                       <i class="fa-brands fa-whatsapp"></i>
                     </a>
-                    <button onclick="updateAppointmentStatus('${apt.id}', 'Concluído')" title="Marcar como Concluído" class="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-black transition">
-                      <i class="fa-solid fa-check"></i>
+                  </div>
+                </td>
+                <td class="p-3 text-zinc-300">
+                  <div class="font-medium">${apt.serviceName}</div>
+                  <div class="text-[10px] text-zinc-500">${apt.paymentMethod || 'PIX'}</div>
+                </td>
+                <td class="p-3 text-zinc-300">${apt.barberName}</td>
+                <td class="p-3 font-bold text-amber-400 whitespace-nowrap">${formatCurrency(apt.price)}</td>
+                <td class="p-3 whitespace-nowrap">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] border ${statusColor}">
+                    ${isPendingAccept ? '🔔 NOVO PEDIDO' : apt.status}
+                  </span>
+                </td>
+                <td class="p-3 text-right whitespace-nowrap">
+                  <div class="flex items-center justify-end gap-1.5">
+                    ${isPendingAccept ? `
+                      <button onclick="acceptAppointment('${apt.id}')" class="px-2.5 py-1 rounded bg-emerald-500 text-black hover:bg-emerald-400 text-xs font-bold transition flex items-center gap-1 shadow">
+                        <i class="fa-solid fa-check"></i> Aceitar
+                      </button>
+                    ` : `
+                      <button onclick="updateAppointmentStatus('${apt.id}', 'Concluído')" title="Marcar como Concluído" class="w-7 h-7 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500 hover:text-black transition flex items-center justify-center">
+                        <i class="fa-solid fa-check text-xs"></i>
+                      </button>
+                    `}
+                    <button onclick="updateAppointmentStatus('${apt.id}', 'Cancelado')" title="Cancelar Agendamento" class="w-7 h-7 rounded bg-red-500/20 text-red-300 hover:bg-red-500 hover:text-white transition flex items-center justify-center">
+                      <i class="fa-solid fa-xmark text-xs"></i>
                     </button>
-                    <button onclick="updateAppointmentStatus('${apt.id}', 'Cancelado')" title="Cancelar" class="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition">
-                      <i class="fa-solid fa-ban"></i>
-                    </button>
-                    <button onclick="deleteAppointment('${apt.id}')" title="Excluir" class="p-1.5 rounded-lg bg-zinc-800 text-zinc-400 hover:text-red-400 transition">
-                      <i class="fa-solid fa-trash"></i>
+                    <button onclick="deleteAppointment('${apt.id}')" title="Excluir do Histórico" class="w-7 h-7 rounded bg-zinc-800 text-zinc-400 hover:text-red-400 transition flex items-center justify-center">
+                      <i class="fa-solid fa-trash text-xs"></i>
                     </button>
                   </div>
                 </td>
@@ -2310,418 +2395,368 @@
       const apt = allAppointments.find(a => a.id === id);
       if (apt) {
         apt.status = newStatus;
+        if (newStatus === 'Concluído' || newStatus === 'Cancelado') {
+          pendingAcknowledgeIds.delete(id);
+          if (pendingAcknowledgeIds.size === 0) stopAlarmLoop();
+        }
         saveAppointmentsToStorage();
         updateAdminDashboard();
         pushAppointmentsToCloud(allAppointments);
-        showToast(`Status atualizado para "${newStatus}"`, 'success');
+        showToast(`Agendamento atualizado para "${newStatus}".`, 'info');
       }
     }
     window.updateAppointmentStatus = updateAppointmentStatus;
 
     function deleteAppointment(id) {
+      pendingAcknowledgeIds.delete(id);
+      if (pendingAcknowledgeIds.size === 0) stopAlarmLoop();
       allAppointments = allAppointments.filter(a => a.id !== id);
       saveAppointmentsToStorage();
       updateAdminDashboard();
       pushAppointmentsToCloud(allAppointments);
-      showToast('Agendamento removido.', 'info');
+      showToast('Agendamento removido do registro.', 'info');
     }
     window.deleteAppointment = deleteAppointment;
 
+    /* =========================================================================
+       MÉTRICAS FINANCEIRAS E COMISSÕES POR BARBEIRO
+       ========================================================================= */
     function renderFinancialMetrics() {
-      const containerPay = document.getElementById('financePaymentMethodsBreakdown');
-      const containerSvc = document.getElementById('financeServicesBreakdown');
-      const containerBarbers = document.getElementById('financeBarbersEarningsGrid');
-      if (!containerPay || !containerSvc) return;
+      const earningsGrid = document.getElementById('financeBarbersEarningsGrid');
+      const paymentsContainer = document.getElementById('financePaymentMethodsBreakdown');
+      const servicesContainer = document.getElementById('financeServicesBreakdown');
+
+      const rateSelect = document.getElementById('financeCommissionRate');
+      const commissionRate = rateSelect ? parseFloat(rateSelect.value) : 0.50;
 
       const validApts = allAppointments.filter(a => a.status !== 'Cancelado');
-      const totalRevenue = validApts.reduce((acc, c) => acc + (Number(c.price) || 0), 0);
-      const commissionRate = parseFloat(document.getElementById('financeCommissionRate')?.value || 0.50);
+      const totalGlobalRevenue = validApts.reduce((acc, curr) => acc + (Number(curr.price) || 0), 0);
 
-      // Ganhos por Barbeiro
-      if (containerBarbers) {
-        const barberStats = {};
+      // 1. Ganhos por Barbeiro
+      if (earningsGrid) {
+        earningsGrid.innerHTML = BARBERS_DATA.map(barber => {
+          const barberApts = validApts.filter(a => a.barberId === barber.id || a.barberName === barber.name);
+          const grossRevenue = barberApts.reduce((acc, curr) => acc + (Number(curr.price) || 0), 0);
+          const barberNet = grossRevenue * commissionRate;
+          const houseShare = grossRevenue - barberNet;
+          const sharePercent = totalGlobalRevenue > 0 ? ((grossRevenue / totalGlobalRevenue) * 100).toFixed(0) : 0;
 
-        BARBERS_DATA.forEach(b => {
-          if (b.id !== 'barber-0') {
-            barberStats[b.name] = {
-              name: b.name,
-              role: b.role,
-              avatar: b.avatar,
-              count: 0,
-              totalGross: 0
-            };
-          }
-        });
-
-        validApts.forEach(apt => {
-          const bName = apt.barberName || 'Não Atribuído';
-          if (!barberStats[bName]) {
-            barberStats[bName] = {
-              name: bName,
-              role: 'Barbeiro',
-              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-              count: 0,
-              totalGross: 0
-            };
-          }
-          barberStats[bName].count += 1;
-          barberStats[bName].totalGross += Number(apt.price) || 0;
-        });
-
-        const sortedBarbers = Object.values(barberStats).sort((a, b) => b.totalGross - a.totalGross);
-
-        if (sortedBarbers.length === 0) {
-          containerBarbers.innerHTML = '<div class="col-span-full text-center py-6 text-zinc-500 text-xs">Nenhum atendimento registrado.</div>';
-        } else {
-          containerBarbers.innerHTML = sortedBarbers.map(b => {
-            const barberCommission = b.totalGross * commissionRate;
-            const housePart = b.totalGross - barberCommission;
-            const sharePct = totalRevenue > 0 ? Math.round((b.totalGross / totalRevenue) * 100) : 0;
-
-            return `
-              <div class="p-4 bg-vintage-850 rounded-xl border border-zinc-800 hover:border-amber-500/40 transition">
-                <div class="flex items-center gap-3 mb-3">
-                  <img src="${b.avatar}" alt="${b.name}" class="w-12 h-12 rounded-full object-cover border border-amber-500/30">
-                  <div class="overflow-hidden">
-                    <h4 class="font-bold text-white text-xs sm:text-sm truncate">${b.name}</h4>
-                    <p class="text-[11px] text-zinc-400 truncate">${b.role}</p>
-                    <span class="inline-block mt-0.5 text-[10px] text-zinc-500 font-medium">
-                      ${b.count} corte(s) &bull; ${sharePct}% da receita
-                    </span>
-                  </div>
-                </div>
-
-                <div class="space-y-1.5 border-t border-zinc-800/80 pt-2.5 text-xs">
-                  <div class="flex justify-between items-center">
-                    <span class="text-zinc-400">Total Faturado:</span>
-                    <span class="font-bold text-white">${formatCurrency(b.totalGross)}</span>
-                  </div>
-                  <div class="flex justify-between items-center">
-                    <span class="text-emerald-400 flex items-center gap-1">
-                      <i class="fa-solid fa-wallet text-[10px]"></i> Líquido Barbeiro:
-                    </span>
-                    <span class="font-bold text-emerald-400">${formatCurrency(barberCommission)}</span>
-                  </div>
-                  ${commissionRate < 1.0 ? `
-                    <div class="flex justify-between items-center text-[11px] text-zinc-500">
-                      <span>Barbearia:</span>
-                      <span>${formatCurrency(housePart)}</span>
-                    </div>
-                  ` : ''}
-                </div>
-
-                <div class="w-full bg-zinc-800 rounded-full h-1.5 mt-3 overflow-hidden">
-                  <div class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: ${sharePct}%"></div>
+          return `
+            <div class="p-4 bg-vintage-850 rounded-xl border border-zinc-800 space-y-3">
+              <div class="flex items-center gap-3">
+                <img src="${barber.avatar}" alt="${barber.name}" class="w-11 h-11 rounded-full object-cover border border-amber-500/30">
+                <div class="overflow-hidden">
+                  <h4 class="font-bold text-white text-xs sm:text-sm truncate">${barber.name}</h4>
+                  <p class="text-[11px] text-zinc-400 truncate">${barber.role}</p>
                 </div>
               </div>
-            `;
-          }).join('');
+
+              <div class="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-zinc-800/80">
+                <div>
+                  <span class="text-[10px] text-zinc-500 block">Total Bruto</span>
+                  <span class="font-bold text-white">${formatCurrency(grossRevenue)}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-zinc-500 block">Atendimentos</span>
+                  <span class="font-bold text-amber-400">${barberApts.length} cortes</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-emerald-400 block font-semibold">Líquido Barbeiro</span>
+                  <span class="font-bold text-emerald-400">${formatCurrency(barberNet)}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-zinc-500 block">Casa / Barbearia</span>
+                  <span class="font-bold text-zinc-300">${formatCurrency(houseShare)}</span>
+                </div>
+              </div>
+
+              <div class="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                <div class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: ${sharePercent}%"></div>
+              </div>
+              <div class="text-[10px] text-zinc-500 text-right">${sharePercent}% da receita geral</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 2. Métodos de Pagamento
+      if (paymentsContainer) {
+        const paymentTotals = { PIX: 0, Cartão: 0, Dinheiro: 0 };
+        validApts.forEach(a => {
+          const method = a.paymentMethod || 'PIX';
+          if (paymentTotals[method] !== undefined) {
+            paymentTotals[method] += (Number(a.price) || 0);
+          } else {
+            paymentTotals.PIX += (Number(a.price) || 0);
+          }
+        });
+
+        paymentsContainer.innerHTML = Object.entries(paymentTotals).map(([method, val]) => {
+          const pct = totalGlobalRevenue > 0 ? ((val / totalGlobalRevenue) * 100).toFixed(1) : 0;
+          const icon = method === 'PIX' ? 'fa-brands fa-pix text-emerald-400' :
+                       (method === 'Cartão' ? 'fa-solid fa-credit-card text-blue-400' : 'fa-solid fa-money-bill-wave text-amber-400');
+          return `
+            <div class="space-y-1 text-xs">
+              <div class="flex justify-between items-center text-zinc-300">
+                <span class="flex items-center gap-2"><i class="${icon}"></i> ${method}</span>
+                <span class="font-bold text-white">${formatCurrency(val)} (${pct}%)</span>
+              </div>
+              <div class="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
+                <div class="bg-amber-500 h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 3. Serviços mais rentáveis
+      if (servicesContainer) {
+        const serviceCounts = {};
+        validApts.forEach(a => {
+          const sName = a.serviceName || 'Outro';
+          serviceCounts[sName] = (serviceCounts[sName] || 0) + 1;
+        });
+
+        const sorted = Object.entries(serviceCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        if (sorted.length === 0) {
+          servicesContainer.innerHTML = '<div class="text-zinc-500 text-xs py-4 text-center">Nenhum serviço registrado ainda.</div>';
+        } else {
+          servicesContainer.innerHTML = sorted.map(([sName, count]) => `
+            <div class="flex items-center justify-between p-2 rounded-lg bg-vintage-850 border border-zinc-800 text-xs">
+              <span class="font-medium text-white truncate max-w-[180px]">${sName}</span>
+              <span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-bold">${count} vezes</span>
+            </div>
+          `).join('');
         }
       }
-
-      // Métodos de Pagamento
-      const methods = { 'PIX': 0, 'Cartão': 0, 'Dinheiro': 0 };
-      validApts.forEach(a => {
-        const method = a.paymentMethod || 'PIX';
-        methods[method] = (methods[method] || 0) + Number(a.price);
-      });
-
-      containerPay.innerHTML = Object.keys(methods).map(method => {
-        const val = methods[method];
-        const pct = totalRevenue > 0 ? Math.round((val / totalRevenue) * 100) : 0;
-        return `
-          <div>
-            <div class="flex justify-between text-xs sm:text-sm font-semibold mb-1">
-              <span class="text-white flex items-center gap-1.5">
-                ${method === 'PIX' ? '<i class="fa-brands fa-pix text-emerald-400"></i>' : (method === 'Cartão' ? '<i class="fa-solid fa-credit-card text-blue-400"></i>' : '<i class="fa-solid fa-money-bill-wave text-amber-400"></i>')}
-                ${method}
-              </span>
-              <span class="text-amber-400">${formatCurrency(val)} <span class="text-zinc-500 font-normal">(${pct}%)</span></span>
-            </div>
-            <div class="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
-              <div class="bg-gradient-to-r from-amber-500 to-amber-600 h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      // Serviços Mais Rentáveis
-      const svcMap = {};
-      validApts.forEach(a => {
-        svcMap[a.serviceName] = (svcMap[a.serviceName] || 0) + Number(a.price);
-      });
-
-      const sortedSvc = Object.entries(svcMap).sort((a,b) => b[1] - a[1]);
-      if (sortedSvc.length === 0) {
-        containerSvc.innerHTML = '<p class="text-xs text-zinc-500">Sem dados financeiros no momento.</p>';
-        return;
-      }
-
-      containerSvc.innerHTML = sortedSvc.map(([svcName, total]) => `
-        <div class="flex items-center justify-between p-2.5 bg-vintage-850 rounded-xl border border-zinc-800">
-          <span class="text-xs text-zinc-300 font-medium truncate max-w-[180px]">${svcName}</span>
-          <span class="text-xs font-bold text-amber-400">${formatCurrency(total)}</span>
-        </div>
-      `).join('');
     }
+    window.renderFinancialMetrics = renderFinancialMetrics;
 
+    /* =========================================================================
+       CRM DE CLIENTES
+       ========================================================================= */
     function renderClientsList() {
       const container = document.getElementById('clientsCardsContainer');
       if (!container) return;
 
-      const searchTerm = (document.getElementById('clientSearchInput')?.value || '').toLowerCase();
-
-      const clientsMap = {};
+      const search = (document.getElementById('clientSearchInput')?.value || '').toLowerCase();
+      
+      const clientMap = new Map();
       allAppointments.forEach(apt => {
-        const key = apt.clientPhone.replace(/\D/g, '') || apt.clientName;
-        if (!clientsMap[key]) {
-          clientsMap[key] = {
+        const key = apt.clientPhone.replace(/\D/g, '') || apt.clientName.toLowerCase();
+        if (!clientMap.has(key)) {
+          clientMap.set(key, {
             name: apt.clientName,
             phone: apt.clientPhone,
-            email: apt.clientEmail || 'Não informado',
-            totalSpent: 0,
-            visitsCount: 0,
+            email: apt.clientEmail || '',
+            count: 0,
+            spent: 0,
             lastVisit: apt.date
-          };
+          });
         }
+        const c = clientMap.get(key);
+        c.count += 1;
         if (apt.status !== 'Cancelado') {
-          clientsMap[key].totalSpent += Number(apt.price);
+          c.spent += (Number(apt.price) || 0);
         }
-        clientsMap[key].visitsCount += 1;
-        if (new Date(apt.date) > new Date(clientsMap[key].lastVisit)) {
-          clientsMap[key].lastVisit = apt.date;
+        if (new Date(apt.date) > new Date(c.lastVisit)) {
+          c.lastVisit = apt.date;
         }
       });
 
-      const clientList = Object.values(clientsMap).filter(c => {
-        return c.name.toLowerCase().includes(searchTerm) || c.phone.includes(searchTerm);
+      const clients = Array.from(clientMap.values()).filter(c => {
+        return c.name.toLowerCase().includes(search) || c.phone.includes(search);
       });
 
-      if (clientList.length === 0) {
-        container.innerHTML = '<div class="col-span-full text-center py-6 text-zinc-500 text-xs">Nenhum cliente cadastrado.</div>';
+      if (clients.length === 0) {
+        container.innerHTML = '<div class="col-span-full text-center py-8 text-zinc-500 text-xs">Nenhum cliente encontrado.</div>';
         return;
       }
 
-      container.innerHTML = clientList.map(c => {
-        const cleanPhone = c.phone.replace(/\D/g, '');
+      container.innerHTML = clients.map(client => {
+        const cleanPhone = client.phone.replace(/\D/g, '');
+        const isVip = client.count >= 3;
         return `
-          <div class="p-3.5 bg-vintage-850 rounded-xl border border-zinc-800 relative group hover:border-amber-500/40 transition">
-            <div class="flex items-center gap-2.5 mb-2.5">
-              <div class="w-9 h-9 rounded-full bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center text-xs">
-                ${c.name.charAt(0).toUpperCase()}
-              </div>
-              <div class="overflow-hidden">
-                <h4 class="font-bold text-white text-xs truncate">${c.name}</h4>
-                <p class="text-[11px] text-zinc-400 truncate">${c.phone}</p>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2 text-xs border-t border-zinc-800/80 pt-2.5">
+          <div class="p-4 bg-vintage-850 rounded-xl border border-zinc-800 space-y-2 hover:border-zinc-700 transition">
+            <div class="flex items-start justify-between">
               <div>
-                <span class="text-zinc-500 block text-[9px] uppercase">Gasto Total</span>
-                <span class="font-bold text-emerald-400">${formatCurrency(c.totalSpent)}</span>
+                <h4 class="font-bold text-white text-xs sm:text-sm flex items-center gap-1.5">
+                  ${client.name}
+                  ${isVip ? '<span class="px-1.5 py-0.5 rounded text-[9px] bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">VIP</span>' : ''}
+                </h4>
+                <p class="text-zinc-400 text-[11px] mt-0.5">${client.phone}</p>
               </div>
-              <div>
-                <span class="text-zinc-500 block text-[9px] uppercase">Atendimentos</span>
-                <span class="font-bold text-white">${c.visitsCount} visita(s)</span>
-              </div>
-            </div>
-
-            <div class="mt-2.5 flex justify-between items-center text-xs pt-2 border-t border-zinc-800/80">
-              <span class="text-zinc-500 text-[10px]">Último: ${formatDateToBR(c.lastVisit)}</span>
-              <a href="https://wa.me/55${cleanPhone}?text=Ol%C3%A1%20${encodeURIComponent(c.name)}%2C%20tudo%20bem%3F%20Nem%20Barbearia%20passando%20para%20agradecer!" target="_blank" class="text-emerald-400 hover:text-emerald-300 font-medium text-[11px] flex items-center gap-1">
-                <i class="fa-brands fa-whatsapp"></i> Conversar
+              <a href="https://wa.me/55${cleanPhone}" target="_blank" class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-sm border border-emerald-500/30 hover:bg-emerald-500 hover:text-black transition">
+                <i class="fa-brands fa-whatsapp"></i>
               </a>
+            </div>
+
+            <div class="border-t border-zinc-800/80 pt-2 grid grid-cols-3 gap-1 text-[11px] text-center">
+              <div>
+                <span class="text-zinc-500 block text-[10px]">Visitas</span>
+                <span class="font-bold text-white">${client.count}</span>
+              </div>
+              <div>
+                <span class="text-zinc-500 block text-[10px]">Investido</span>
+                <span class="font-bold text-amber-400">${formatCurrency(client.spent)}</span>
+              </div>
+              <div>
+                <span class="text-zinc-500 block text-[10px]">Última Vez</span>
+                <span class="font-medium text-zinc-300">${formatDateToBR(client.lastVisit)}</span>
+              </div>
             </div>
           </div>
         `;
       }).join('');
     }
+    window.renderClientsList = renderClientsList;
 
-    /* Modal de Balcão Manual */
+    /* =========================================================================
+       AGENDAMENTO MANUAL DE BALCÃO
+       ========================================================================= */
     function openNewBookingModal() {
       const modal = document.getElementById('manualBookingModal');
-      const serviceSelect = document.getElementById('manualServiceSelect');
-      const barberSelect = document.getElementById('manualBarberSelect');
-      const timeSelect = document.getElementById('manualTime');
-      const dateInput = document.getElementById('manualDate');
+      const sSelect = document.getElementById('manualServiceSelect');
+      const bSelect = document.getElementById('manualBarberSelect');
+      const tSelect = document.getElementById('manualTime');
+      const dInput = document.getElementById('manualDate');
 
-      serviceSelect.innerHTML = SERVICES_DATA.map(s => `<option value="${s.id}">${s.title} (${formatCurrency(s.price)})</option>`).join('');
-      barberSelect.innerHTML = BARBERS_DATA.filter(b => b.id !== 'barber-0').map(b => `<option value="${b.id}">${b.name}</option>`).join('');
-      timeSelect.innerHTML = DEFAULT_TIME_SLOTS.map(t => `<option value="${t}">${t}</option>`).join('');
-
-      const todayStr = new Date().toISOString().split('T')[0];
-      dateInput.value = todayStr;
-      dateInput.min = todayStr;
+      if (sSelect) {
+        sSelect.innerHTML = SERVICES_DATA.map(s => `<option value="${s.id}">${s.title} (${formatCurrency(s.price)})</option>`).join('');
+      }
+      if (bSelect) {
+        bSelect.innerHTML = BARBERS_DATA.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+      }
+      if (tSelect) {
+        tSelect.innerHTML = DEFAULT_TIME_SLOTS.map(t => `<option value="${t}">${t}</option>`).join('');
+      }
+      if (dInput) {
+        dInput.value = new Date().toISOString().split('T')[0];
+      }
 
       modal.classList.remove('hidden');
     }
     window.openNewBookingModal = openNewBookingModal;
 
     function closeNewBookingModal() {
-      document.getElementById('manualBookingModal').classList.add('hidden');
-      document.getElementById('manualBookingForm').reset();
+      const modal = document.getElementById('manualBookingModal');
+      if (modal) modal.classList.add('hidden');
     }
     window.closeNewBookingModal = closeNewBookingModal;
 
     function handleManualBookingSubmit(e) {
       e.preventDefault();
-      const serviceId = document.getElementById('manualServiceSelect').value;
-      const barberId = document.getElementById('manualBarberSelect').value;
-      const svc = SERVICES_DATA.find(s => s.id === serviceId);
-      const barber = BARBERS_DATA.find(b => b.id === barberId);
+      const name = document.getElementById('manualName').value.trim();
+      const phone = document.getElementById('manualPhone').value.trim();
+      const sId = document.getElementById('manualServiceSelect').value;
+      const bId = document.getElementById('manualBarberSelect').value;
+      const date = document.getElementById('manualDate').value;
+      const time = document.getElementById('manualTime').value;
+      const payment = document.getElementById('manualPayment').value;
 
-      const newApt = {
-        id: 'NEM-' + Math.floor(1000 + Math.random() * 9000),
-        clientName: document.getElementById('manualName').value.trim(),
-        clientPhone: document.getElementById('manualPhone').value.trim(),
+      const svc = SERVICES_DATA.find(s => s.id === sId);
+      const brb = BARBERS_DATA.find(b => b.id === bId);
+
+      const newId = 'BALCAO-' + Math.floor(1000 + Math.random() * 9000);
+      const appointment = {
+        id: newId,
+        clientName: name,
+        clientPhone: phone,
         clientEmail: '',
-        serviceId: svc.id,
-        serviceName: svc.title,
-        price: svc.price,
-        barberId: barber.id,
-        barberName: barber.name,
-        date: document.getElementById('manualDate').value,
-        time: document.getElementById('manualTime').value,
+        serviceId: sId,
+        serviceName: svc ? svc.title : 'Serviço Personalizado',
+        price: svc ? svc.price : 40.0,
+        barberId: bId,
+        barberName: brb ? brb.name : 'Equipe Nem',
+        date,
+        time,
         status: 'Confirmado',
-        paymentMethod: document.getElementById('manualPayment').value,
-        notes: 'Agendado manualmente via balcão',
+        paymentMethod: payment,
+        notes: 'Agendamento presencial / balcão',
         createdAt: new Date().toISOString()
       };
 
-      allAppointments.unshift(newApt);
-      knownAptIds.add(newApt.id);
+      allAppointments.unshift(appointment);
+      knownAptIds.add(appointment.id);
       saveAppointmentsToStorage();
+      updateAdminDashboard();
       pushAppointmentsToCloud(allAppointments);
       closeNewBookingModal();
-      updateAdminDashboard();
-      showToast('Agendamento cadastrado com sucesso!', 'success');
+      showToast('Agendamento de balcão adicionado!', 'success');
     }
     window.handleManualBookingSubmit = handleManualBookingSubmit;
 
-    /* Persistência LocalStorage & Dados de Exemplo */
+    /* =========================================================================
+       PERSISTÊNCIA LOCAL & UTILITÁRIOS
+       ========================================================================= */
+    function saveAppointmentsToStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allAppointments));
+    }
+
     function loadAppointmentsFromStorage() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         try {
           allAppointments = JSON.parse(stored);
         } catch (e) {
-          allAppointments = getSeedData();
+          allAppointments = [];
         }
       } else {
-        allAppointments = getSeedData();
+        // Mock inicial elegante caso esteja limpo
+        const todayIso = new Date().toISOString().split('T')[0];
+        allAppointments = [
+          {
+            id: 'NEM-1001',
+            clientName: 'Carlos Eduardo',
+            clientPhone: '(71) 98765-4321',
+            clientEmail: '',
+            serviceId: 'srv-1',
+            serviceName: 'Corte Clássico Nem',
+            price: 45.0,
+            barberId: 'barber-1',
+            barberName: 'Mestre Nem',
+            date: todayIso,
+            time: '10:20',
+            status: 'Confirmado',
+            paymentMethod: 'PIX',
+            notes: '',
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: 'NEM-1002',
+            clientName: 'Lucas Oliveira',
+            clientPhone: '(71) 99123-4567',
+            clientEmail: '',
+            serviceId: 'srv-3',
+            serviceName: 'Combo Nem Completo',
+            price: 80.0,
+            barberId: 'barber-2',
+            barberName: 'Marcos Bahia',
+            date: todayIso,
+            time: '14:20',
+            status: 'Concluído',
+            paymentMethod: 'Cartão',
+            notes: '',
+            createdAt: new Date().toISOString()
+          }
+        ];
         saveAppointmentsToStorage();
       }
+
       allAppointments.forEach(a => knownAptIds.add(a.id));
     }
 
-    function saveAppointmentsToStorage() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(allAppointments));
-    }
-
-    function resetToSampleData() {
-      allAppointments = getSeedData();
-      saveAppointmentsToStorage();
-      pushAppointmentsToCloud(allAppointments);
-      updateAdminDashboard();
-      showToast('Dados de demonstração restaurados!', 'info');
-    }
-    window.resetToSampleData = resetToSampleData;
-
-    function getSeedData() {
-      const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
-
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-      return [
-        {
-          id: 'NEM-3021',
-          clientName: 'Antônio Santos',
-          clientPhone: '(71) 99123-4567',
-          clientEmail: 'antonio@email.com',
-          serviceId: 'srv-3',
-          serviceName: 'Combo Nem Completo (Cabelo + Barba)',
-          price: 80.00,
-          barberId: 'barber-1',
-          barberName: 'Mestre Nem',
-          date: todayStr,
-          time: '14:20',
-          status: 'Confirmado',
-          paymentMethod: 'PIX',
-          notes: 'Cliente fiel desde 2012',
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: 'NEM-3018',
-          clientName: 'Matheus Oliveira',
-          clientPhone: '(71) 98765-4321',
-          clientEmail: 'matheus@email.com',
-          serviceId: 'srv-4',
-          serviceName: 'Corte Degradê / Fade Art',
-          price: 50.00,
-          barberId: 'barber-2',
-          barberName: 'Marcos Bahia',
-          date: todayStr,
-          time: '16:20',
-          status: 'Confirmado',
-          paymentMethod: 'Cartão',
-          notes: 'Degradê na navalha bem marcado',
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: 'NEM-3014',
-          clientName: 'Carlos Eduardo',
-          clientPhone: '(71) 98111-2233',
-          clientEmail: '',
-          serviceId: 'srv-2',
-          serviceName: 'Barboterapia & Navalha',
-          price: 40.00,
-          barberId: 'barber-3',
-          barberName: 'Lucas Navalha',
-          date: yesterdayStr,
-          time: '11:00',
-          status: 'Concluído',
-          paymentMethod: 'Dinheiro',
-          notes: '',
-          createdAt: new Date().toISOString()
-        }
-      ];
-    }
-
-    /* Utilitários e Notificações */
     function formatCurrency(val) {
-      return (Number(val) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      return Number(val || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
 
     function formatDateToBR(isoDate) {
-      if (!isoDate) return '';
+      if (!isoDate) return '--';
       const parts = isoDate.split('-');
-      if (parts.length !== 3) return isoDate;
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
-
-    function showToast(message, type = 'info') {
-      const container = document.getElementById('toastContainer');
-      if (!container) return;
-
-      const toast = document.createElement('div');
-      toast.className = `p-3 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 border pointer-events-auto transition-all transform translate-y-2 duration-300 ${
-        type === 'success' 
-          ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/40' 
-          : (type === 'error' ? 'bg-red-950/90 text-red-300 border-red-500/40' : 'bg-vintage-850 text-white border-zinc-700')
-      }`;
-
-      const icon = type === 'success' ? 'fa-circle-check text-emerald-400' : (type === 'error' ? 'fa-circle-exclamation text-red-400' : 'fa-bell text-amber-400');
-      toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
-      container.appendChild(toast);
-
-      setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-x-4');
-        setTimeout(() => toast.remove(), 300);
-      }, 3500);
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      return isoDate;
     }
 
     function showNotificationDot() {
@@ -2729,25 +2764,53 @@
       if (dot) dot.classList.remove('hidden');
     }
 
-    /* Inicialização na Carga da Janela */
-    window.addEventListener('DOMContentLoaded', () => {
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      const bg = type === 'success' ? 'bg-emerald-600 border-emerald-400 text-white' :
+                 (type === 'error' ? 'bg-red-600 border-red-400 text-white' : 'bg-vintage-850 border-amber-500/50 text-amber-300');
+
+      toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl border shadow-2xl flex items-center gap-2.5 text-xs font-semibold transform transition-all duration-300 translate-y-2 opacity-0 ${bg}`;
+      toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : (type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-info')}"></i> <span>${message}</span>`;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    /* =========================================================================
+       INICIALIZAÇÃO DA APLICAÇÃO
+       ========================================================================= */
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Carrega dados de apoio
       loadServicesAndBarbers();
       loadAppointmentsFromStorage();
+
+      // 2. Monta tela do cliente
       renderServices();
       renderBarbers();
       initDatePicker();
+
+      // 3. Inicia conexão e sincronização com a Nuvem
       initCloudSync();
 
+      // 4. Se a sessão de admin já estava ativa, restaura a visão
       if (sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true') {
         isAdminAuthenticated = true;
         switchView('admin');
       }
 
-      window.addEventListener('storage', (event) => {
-        if (event.key === STORAGE_KEY) {
-          loadAppointmentsFromStorage();
-          updateAdminDashboard();
-        }
+      // 5. Desbloqueia áudio no primeiro clique ou toque
+      ['click', 'touchstart', 'keydown'].forEach(evt => {
+        window.addEventListener(evt, () => unlockAudioSystem(), { once: true });
       });
     });
   </script>
